@@ -80,10 +80,13 @@ export interface SigilProps {
   hideHashOnPill?: boolean;
 }
 
+// `/version.json` is conventionally served from the origin root,
+// not relative to the current path. Resolve against `location.origin`
+// so a client-routed page like `/settings` still hits `/version.json`
+// and not `/settings/version.json`.
 const DEFAULT_VERSION_URL =
-  typeof document !== "undefined"
-    ? // Resolve against <base href> if present, else origin root.
-      new URL("version.json", document.baseURI).toString()
+  typeof window !== "undefined"
+    ? new URL("/version.json", window.location.origin).toString()
     : "/version.json";
 
 export function Sigil(props: SigilProps = {}) {
@@ -97,6 +100,13 @@ export function Sigil(props: SigilProps = {}) {
 
   const [info, setInfo] = useState<VersionInfo | null>(prefetched ?? null);
   const [open, setOpen] = useState(false);
+
+  // Track prefetched updates after the initial render — common with
+  // SSR hydration / async bootstrapping. Kept as a separate effect
+  // from the fetch path so the dep arrays stay narrow.
+  useEffect(() => {
+    if (prefetched) setInfo(prefetched);
+  }, [prefetched]);
 
   useEffect(() => {
     if (prefetched) return;
@@ -120,13 +130,29 @@ export function Sigil(props: SigilProps = {}) {
   const { name: magicName, hash: nameHash } = splitMagicName(info.version);
   const hash = info.hash ?? nameHash ?? "";
   const built = formatBuiltDate(info.built);
-  const commitUrl =
-    info.commit_url ||
-    (info.repo && hash
+  // Don't synthesize a `/commit/<hash>` link for non-real hashes —
+  // the realm-sigil contract intentionally leaves `commit_url`
+  // blank when `hash === "dev"`, so respect that and render no link.
+  const hashIsReal = hash && hash !== "dev" && hash !== "unknown";
+  const commitUrl = info.commit_url
+    ? info.commit_url
+    : info.repo && hashIsReal
       ? `${info.repo.replace(/\/+$/, "")}/commit/${hash}`
-      : null);
+      : null;
 
   const ariaLabel = `Build sigil — ${info.version ?? hash}${info.dirty ? " (dirty)" : ""}`;
+
+  // `onBlur` bubbles from every descendant, so a naive `() => setOpen(false)`
+  // would fire when focus moves from the button into the panel link —
+  // closing the panel before the user could activate it. Only collapse
+  // when focus actually leaves the whole aside (relatedTarget is outside
+  // currentTarget, or is null which means focus left the document).
+  function handleBlur(e: React.FocusEvent<HTMLElement>) {
+    const next = e.relatedTarget as Node | null;
+    if (!next || !e.currentTarget.contains(next)) {
+      setOpen(false);
+    }
+  }
 
   return (
     <aside
@@ -141,7 +167,7 @@ export function Sigil(props: SigilProps = {}) {
       onMouseEnter={() => setOpen(true)}
       onMouseLeave={() => setOpen(false)}
       onFocus={() => setOpen(true)}
-      onBlur={() => setOpen(false)}
+      onBlur={handleBlur}
     >
       <button
         type="button"

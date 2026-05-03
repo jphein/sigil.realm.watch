@@ -92,7 +92,7 @@ panel, GitHub-commit link.
 
 ```tsx
 import { Sigil } from "realm-sigil/react";
-import "realm-sigil/react/style.css";  // or import the module CSS your way
+import "realm-sigil/react/style.css";
 
 export function App() {
   return (
@@ -103,6 +103,12 @@ export function App() {
   );
 }
 ```
+
+The component is shipped as TSX source; `realm-sigil/react/style.css`
+is the only CSS subpath the package exports. Most modern bundlers
+(Vite, Next.js, CRA, Remix) handle CSS-module compilation
+automatically — drop the import in `main.tsx`/`_app.tsx`/equivalent
+and the styles wire up.
 
 By default the Sigil fetches `/version.json` (which the static
 `build.sh` or your own writer produces). Themed via CSS custom
