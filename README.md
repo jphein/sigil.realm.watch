@@ -15,6 +15,7 @@ f0f0f0f  →  "Pulsating Pulsar · f0f0f0f" (stellar)
 - Generates magical version names from git commit hashes
 - Provides a standardized `/api/version` JSON endpoint for all services
 - Builds `version.json` + meta tags for static sites
+- Ships a React `<Sigil />` component that renders the live build name as a corner badge
 - Works identically across Go, Python, and JavaScript
 
 ## Quick Start
@@ -82,6 +83,67 @@ export default vercelHandler('myapp', 'My Application', 'forge', 'https://github
 ```
 
 This generates `version.json` and injects a `<meta name="realm-version">` tag into your HTML.
+
+### React component (visible in-app sigil)
+
+A small badge mounted at the app shell that renders the realm-sigil
+name + hash in the corner of every screen. Idle pill, hover-expand
+panel, GitHub-commit link.
+
+```tsx
+import { Sigil } from "realm-sigil/react";
+import "realm-sigil/react/style.css";  // or import the module CSS your way
+
+export function App() {
+  return (
+    <>
+      <Routes>{/* … */}</Routes>
+      <Sigil />
+    </>
+  );
+}
+```
+
+By default the Sigil fetches `/version.json` (which the static
+`build.sh` or your own writer produces). Themed via CSS custom
+properties — override `--rs-bg`, `--rs-fg`, `--rs-accent`,
+`--rs-serif`, etc. on `:root` to match your project palette.
+
+Props (all optional):
+
+| prop | default | description |
+|---|---|---|
+| `versionUrl` | `/version.json` | Where to fetch the version JSON. |
+| `versionInfo` | — | Pre-fetched object; skips the fetch (useful for SSR). |
+| `position` | `"bottom-left"` | Or `"bottom-right"`. Bottom-left is the default to dodge common dev-tools UIs. |
+| `glyph` | `"✦"` | Single character or short string before the magic name. |
+| `hideHashOnPill` | `false` | Show only the magic name on the resting pill. |
+
+A11y: the closed panel uses `inert`, so its GitHub-commit link is
+out of the tab order while collapsed. The pulsing ✦ honors
+`prefers-reduced-motion`.
+
+#### Generating `/version.json` in dev too
+
+Most projects only run the version writer at build time, so
+`npm run dev` ships a stale or missing `version.json` and the Sigil
+either lies or stays empty. Add a `predev` script that runs the
+same writer:
+
+```json
+{
+  "scripts": {
+    "predev":  "node scripts/version.mjs",
+    "dev":     "vite",
+    "prebuild":"node scripts/version.mjs",
+    "build":   "vite build"
+  }
+}
+```
+
+`npm run dev` will then write a fresh `version.json` before the dev
+server starts. The Sigil's idle pill becomes a useful "you are
+currently editing commit X" affordance during local development.
 
 ## Version Response
 
@@ -155,6 +217,8 @@ js/
   index.js                 # Core library + generateName
   handler.js               # Express/Next.js/Vercel handlers
   realms.js                # Generated — do not edit
+  Sigil.tsx                # React component — visible in-app sigil badge
+  Sigil.module.css         # Styles, themed via --rs-* CSS variables
 static/
   build.sh                 # version.json + meta tag generator
 ```
