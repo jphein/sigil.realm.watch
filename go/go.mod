@@ -1,3 +1,3 @@
-module github.com/jphein/realm-sigil/go
+module github.com/jphein/sigil.realm.watch/go
 
 go 1.24

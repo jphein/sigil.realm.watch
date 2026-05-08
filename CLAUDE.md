@@ -1,4 +1,4 @@
-# realm-sigil
+# sigil.realm.watch
 
 Deterministic magical version name generation for JP's projects. One library, three languages (Go, Python, JS), seven themed realms.
 
@@ -13,7 +13,7 @@ A shared versioning library that:
 
 - `words/realms.json` — canonical word lists (single source of truth)
 - `sync-words.sh` — generates `go/realms.go`, `python/realm_sigil/realms.py`, `js/realms.js`
-- `go/` — Go module (`github.com/jphein/realm-sigil/go`)
+- `go/` — Go module (`github.com/jphein/sigil.realm.watch/go`)
 - `python/` — Python package
 - `js/` — Node.js/npm package
 - `static/build.sh` — version.json + meta tag generator for static sites
@@ -40,7 +40,7 @@ handler = version_handler("name", "description", "realm", "repo")
 
 ### JS (Next.js / Vercel / Express)
 ```js
-const { nextHandler } = require('realm-sigil/handler');
+const { nextHandler } = require('sigil.realm.watch/handler');
 export default nextHandler('name', 'description', 'realm', 'repo');
 ```
 

@@ -1,5 +1,5 @@
 {
-  "name": "realm-sigil",
+  "name": "sigil.realm.watch",
   "version": "1.2.0",
   "description": "Deterministic magical version name generation for JP's projects",
   "main": "index.js",

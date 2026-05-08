@@ -1,5 +1,5 @@
 [project]
-name = "realm-sigil"
+name = "sigil.realm.watch"
 version = "1.0.0"
 description = "Deterministic magical version name generation for JP's projects"
 requires-python = ">=3.11"
