@@ -205,6 +205,19 @@ name = "{adjective} {noun} · {hash}"
 
 This guarantees cross-language consistency — the same hash and realm produce the same name in Go, Python, and JavaScript.
 
+## Ports & downstream consumers
+
+**[smol](https://github.com/jphein/smol)** — a whole game console on a $3 ESP32-C3 — is the first downstream consumer, and ships the **first Rust / `no_std` implementation** of the sigil algorithm: [`rust/clock/src/net/names.rs`](https://github.com/jphein/smol/blob/main/rust/clock/src/net/names.rs). Heap-free, zero-alloc, const-foldable (~0.5 KB flash per realm); the index math is faithful (`adj = A[seed % |A|]`, `noun = N[(seed >> 8) % |N|]`) and output is verified to match Go/Python/JS for the same seed. (Candidate to upstream as an official `sigil-rs` crate — [#5](https://github.com/jphein/sigil.realm.watch/issues/5).)
+
+It names two things on each device, from two seed sources:
+
+- **Node names** (`fantasy` realm) — one per physical board, seeded from the board's `u8` id via a golden-ratio spread: `seed = (id as u32).wrapping_mul(2_654_435_761)`. **Why the spread:** a raw small id (< 256) makes `(seed >> 8) % N == 0` for every board, collapsing all nodes onto noun index 0 (one shared noun); the multiply decorrelates the adjective and noun draws. A useful **optional seeder for anyone feeding sigil small integers** instead of git hashes.
+- **Version names** (`forge` realm) — the firmware's own build identity, seeded the native way (`parse_hex(git short hash)`), rendered as the boot splash / menu build tag (e.g. `Dominion v42`).
+
+Verified parity (fantasy realm, node ids): **id7 → "Draconic Dominion", id8 → "Eldritch Nexus", id9 → "Jade Herald"** — identical to what the Go/Python/JS generators emit for the same seeds.
+
+**Pinned-snapshot practice.** smol vendors a **dated snapshot (2026-07-07) of the _generated_ word tables** (`go/realms.go` ≡ `realms.py` ≡ `realms.js` — 20 adjectives / 20 nouns per realm), copied verbatim — deliberately **not** `words/realms.json`. The three word sources currently disagree (generated ≠ `words/realms.json` ≠ lexicon's vocabularies) and the lexicon→sigil cutover is designed but unshipped, so pinning the generated tables protects device identities from silent name churn until that reconciles. See [#4](https://github.com/jphein/sigil.realm.watch/issues/4).
+
 ## Project Structure
 
 ```
