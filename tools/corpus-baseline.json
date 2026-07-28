@@ -1,0 +1,52 @@
+{
+  "go": {
+    "fantasy": "drift",
+    "fleet": "drift",
+    "forge": "absent",
+    "oracle": "absent",
+    "signal": "drift",
+    "stellar": "absent",
+    "tarot": "absent",
+    "void": "absent"
+  },
+  "js": {
+    "fantasy": "drift",
+    "fleet": "drift",
+    "forge": "absent",
+    "oracle": "absent",
+    "signal": "drift",
+    "stellar": "absent",
+    "tarot": "absent",
+    "void": "absent"
+  },
+  "python": {
+    "fantasy": "drift",
+    "fleet": "drift",
+    "forge": "absent",
+    "oracle": "absent",
+    "signal": "drift",
+    "stellar": "absent",
+    "tarot": "absent",
+    "void": "absent"
+  },
+  "rust": {
+    "fantasy": "ok",
+    "fleet": "ok",
+    "forge": "ok",
+    "oracle": "ok",
+    "signal": "ok",
+    "stellar": "ok",
+    "tarot": "ok",
+    "void": "ok"
+  },
+  "wordpress": {
+    "fantasy": "drift",
+    "fleet": "drift",
+    "forge": "absent",
+    "oracle": "absent",
+    "signal": "drift",
+    "stellar": "absent",
+    "tarot": "absent",
+    "void": "absent"
+  }
+}

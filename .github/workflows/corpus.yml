@@ -1,0 +1,48 @@
+name: Corpus
+
+# Asserts every language binding's word list still matches `words/realms.json`.
+#
+# `sync-words.sh` WRITES the bindings and nothing has ever CHECKED them afterwards. That
+# asymmetry is how four bindings sat three months behind the 2026-05-07 lexicon cutover
+# without anyone noticing, and how six consumer projects ended up on the frozen vocabulary.
+# A hand-copied table cannot be checked; a comparison can.
+#
+# The check is order-sensitive: `generate_name` indexes with `seed % len`, so a REORDER or a
+# LENGTH change renames every build while leaving the word set identical. A set-comparison
+# would call that healthy.
+#
+# It compares against `tools/corpus-baseline.json`, so it is green on today's known-behind
+# state and fails only when that state CHANGES — in either direction. A gate that went red
+# immediately would just get switched off; one that records the migration debt keeps it honest.
+# See the module docstring in tools/audit_corpora.py.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'words/**'
+      - 'go/realms.go'
+      - 'python/realm_sigil/realms.py'
+      - 'js/realms.js'
+      - 'wordpress/realm-sigil-version.php'
+      - 'rust/src/realms.rs'
+      - 'tools/audit_corpora.py'
+      - 'tools/corpus-baseline.json'
+      - '.github/workflows/corpus.yml'
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  corpora-agree:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # Deliberately dependency-free: it reads the files as text and compares quoted-string
+      # sequences, so it needs no toolchain for Go, Node, PHP or Rust and cannot be defeated
+      # by a binding that fails to build.
+      - name: Bindings must match words/realms.json
+        run: python3 tools/audit_corpora.py
