@@ -1,0 +1,16 @@
+[package]
+name = "realm-sigil"
+version = "0.1.0"
+edition = "2021"
+description = "Deterministic magical name generation — the Rust binding. no_std, no alloc, no deps."
+license = "MIT"
+repository = "https://github.com/jphein/realm-sigil"
+
+[lib]
+name = "realm_sigil"
+path = "src/lib.rs"
+
+# Deliberately dependency-free. This crate is consumed by bare-metal firmware (smol's ESP32-C3),
+# where every dependency is flash, and by host tools in the same workspace. A word table and two
+# modulo operations do not need a dependency tree.
+[dependencies]
