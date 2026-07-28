@@ -173,9 +173,21 @@ DIVERGENT_NOTE = (
     '/// get two different version names for one commit, so this realm is OFF by default.',
 )
 
+# Which realms are corpus-divergent from the other bindings? DERIVED, not listed: a realm can only
+# disagree with go/python/js if those bindings HAVE it. A realm absent from the (frozen) generated Go
+# embed exists nowhere else, so nothing can contradict it and it needs no gate. Deriving this means
+# every future identity-style namespace is automatically ungated, and nobody has to remember to add
+# it — a hardcoded `!= 'fleet'` would have silently gated `creature` the day it landed.
+try:
+    go_embed = open('go/realms.go').read()
+except FileNotFoundError:
+    go_embed = ''
+def is_divergent(realm):
+    return f'"{realm}"' in go_embed
+
 for realm, words in sorted(data.items()):
     name = ident(realm)
-    themed = realm != 'fleet'
+    themed = is_divergent(realm)
     L.append(f'/// The `{realm}` realm — {len(words["adjectives"])} adjectives / {len(words["nouns"])} nouns.')
     if themed:
         L.extend(DIVERGENT_NOTE)
@@ -201,10 +213,14 @@ for realm in sorted(data):
     L.append(f'    &{ident(realm)},')
 L.append('];')
 L.append('')
-L.append('/// Without `divergent-themed-realms`, `fleet` is the only realm this crate will hand out —')
-L.append('/// node identity, which CANNOT diverge because `fleet` exists in no other binding.')
+non_divergent = sorted(r for r in data if not is_divergent(r))
+L.append('/// Without `divergent-themed-realms`, only the realms that exist in NO other binding are')
+L.append('/// handed out — they cannot diverge, so nothing else can contradict a name they produce.')
 L.append('#[cfg(not(feature = "divergent-themed-realms"))]')
-L.append('pub static REALMS: &[&Realm] = &[&FLEET];')
+L.append('pub static REALMS: &[&Realm] = &[')
+for realm in non_divergent:
+    L.append(f'    &{ident(realm)},')
+L.append('];')
 L.append('')
 L.append("/// Look up a realm by name, falling back to `fantasy` for an unknown one — matching Go's")
 L.append('/// `GenerateName`, which falls back rather than erroring.')
