@@ -6,4 +6,21 @@ requires-python = ">=3.11"
 
 [build-system]
 requires = ["setuptools>=68.0"]
-build-backend = "setuptools.backends._legacy:_Backend"
+# `setuptools.build_meta` is the real PEP 517 entry point. This previously read
+# `setuptools.backends._legacy:_Backend`, which does not exist in any setuptools release — so a
+# clean `pip install ./python` died with `ModuleNotFoundError: No module named
+# 'setuptools.backends'` and the package could NOT be installed at all (pip exits 2).
+#
+# Consequence worth recording, because it explains a pattern rather than one bug: JP's CLAUDE.md
+# mandates realm-sigil for every project with a web presence, and with the install path broken the
+# only way to consume it in Python was to vendor a copy or hack sys.path. **Vendoring is how the
+# corpora drifted apart in the first place** — smol hand-copied the word tables into two crates and
+# they went stale for three months. A broken install path does not stop consumption; it converts
+# dependencies into copies, silently.
+build-backend = "setuptools.build_meta"
+
+# Explicit over auto-discovery: the package root is this directory and `realm_sigil` is the only
+# package in it. Naming it means a future sibling directory (tests/, examples/) cannot confuse
+# discovery into shipping the wrong tree or failing on ambiguity.
+[tool.setuptools]
+packages = ["realm_sigil"]

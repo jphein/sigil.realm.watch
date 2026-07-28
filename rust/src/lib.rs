@@ -371,6 +371,58 @@ mod tests {
         assert_eq!(parse_hex(""), 0);
     }
 
+    /// ALGORITHM parity with Go, isolated from corpus drift.
+    ///
+    /// This matters because a plain four-way comparison of `generate_name("9e3779b1", "fantasy")`
+    /// currently DISAGREES: Go, Python and JS all say `Blazing Jewel`, this crate says
+    /// `Draconic Monolith`. That is **not** an algorithm difference — it is corpus staleness.
+    /// go/python/js ship generated embeds frozen on 2026-04-05 (20 adj / 20 nouns), while
+    /// `words/realms.json` was cut over to lexicon on 2026-05-07 (28 / 25) and this crate is
+    /// generated from the current file. Same arithmetic, different table.
+    ///
+    /// So the parity worth testing is: *given the same words, do we compute the same index?* This
+    /// pins the 2026-04-05 fantasy corpus as a fixture and asserts we reproduce Go's live output
+    /// on it — including the u32 edges where JS used to return `undefined`.
+    ///
+    /// ⚠️ `FLEET` is unaffected by the drift and cannot diverge: it does not exist in the stale
+    /// embeds at all, so no other binding can produce a conflicting node name. Node identity is
+    /// safe; only the themed (version-name) realms differ across bindings today.
+    #[test]
+    fn algorithm_matches_go_given_the_same_corpus() {
+        const STALE_FANTASY: Realm = Realm {
+            name: "fantasy@2026-04-05",
+            adjectives: &[
+                "Arcane", "Blazing", "Celestial", "Draconic", "Eldritch", "Fabled", "Gilded",
+                "Hallowed", "Infernal", "Jade", "Kindled", "Luminous", "Mythic", "Noble",
+                "Obsidian", "Primal", "Radiant", "Spectral", "Twilight", "Valiant",
+            ],
+            nouns: &[
+                "Aegis", "Beacon", "Crown", "Dominion", "Ember", "Forge", "Grimoire", "Herald",
+                "Insignia", "Jewel", "Keystone", "Lantern", "Monolith", "Nexus", "Oracle",
+                "Pinnacle", "Quartz", "Relic", "Sigil", "Throne",
+            ],
+        };
+        // Captured from `go run` against realm-sigil/go on 2026-07-28.
+        let go_says = [
+            ("9e3779b1", "Blazing", "Jewel"),   // JS returned "Blazing undefined" before the fix
+            ("f1bbcd88", "Eldritch", "Nexus"),  // ditto
+            ("7dc219", "Jade", "Oracle"),
+            ("abc1234", "Infernal", "Grimoire"),
+            ("0000001", "Blazing", "Aegis"),
+            ("fffffff", "Primal", "Pinnacle"),
+            ("ffffffff", "Primal", "Pinnacle"), // u32 max
+            ("80000000", "Infernal", "Insignia"), // sign bit set — the int32 trap
+            ("7fffffff", "Hallowed", "Herald"),
+        ];
+        for (hash, adj, noun) in go_says {
+            assert_eq!(
+                name_for_hex(hash, &STALE_FANTASY),
+                (adj, noun),
+                "algorithm diverged from Go on hash {hash}"
+            );
+        }
+    }
+
     /// A realm lookup must never panic on an unknown name — Go falls back to fantasy.
     #[test]
     fn unknown_realm_falls_back() {
