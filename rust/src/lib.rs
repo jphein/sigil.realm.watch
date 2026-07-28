@@ -65,8 +65,21 @@ extern crate std;
 mod realms;
 mod reserved;
 
-pub use realms::{REALMS, realm_by_name};
+pub use realms::REALMS;
 pub use reserved::RESERVED;
+
+/// Name-based realm lookup — **only with the `divergent-themed-realms` feature**.
+///
+/// Gated because a name lookup is precisely how a mixed-language project would silently acquire a
+/// divergent version name: it asks for `"fantasy"` in two languages and gets two different answers.
+/// See the feature's documentation in `Cargo.toml`. For node identity use [`FLEET`] directly, which
+/// is always available and cannot diverge.
+#[cfg(feature = "divergent-themed-realms")]
+pub use realms::realm_by_name;
+
+/// Every themed realm the other bindings expose, re-exported for the gated case only.
+#[cfg(feature = "divergent-themed-realms")]
+pub use realms::{FANTASY, FORGE, ORACLE, SIGNAL, STELLAR, TAROT, VOID};
 
 /// A realm's word corpus. `name = "{adjectives[seed % |A|]} {nouns[(seed >> 8) % |N|]}"`.
 pub struct Realm {
@@ -424,9 +437,20 @@ mod tests {
     }
 
     /// A realm lookup must never panic on an unknown name — Go falls back to fantasy.
+    #[cfg(feature = "divergent-themed-realms")]
     #[test]
     fn unknown_realm_falls_back() {
         assert_eq!(realm_by_name("no-such-realm").name, "fantasy");
         assert_eq!(realm_by_name("fleet").name, "fleet");
+    }
+
+    /// The DEFAULT build must expose exactly one realm — `fleet` — so a consumer cannot reach a
+    /// corpus-divergent themed realm without naming the hazard in its Cargo.toml. This is the
+    /// guard, and it is the reason the divergence is unrepresentable rather than documented.
+    #[cfg(not(feature = "divergent-themed-realms"))]
+    #[test]
+    fn default_build_exposes_only_the_non_divergent_realm() {
+        assert_eq!(REALMS.len(), 1);
+        assert_eq!(REALMS[0].name, "fleet");
     }
 }

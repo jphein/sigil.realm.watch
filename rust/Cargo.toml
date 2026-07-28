@@ -14,3 +14,28 @@ path = "src/lib.rs"
 # where every dependency is flash, and by host tools in the same workspace. A word table and two
 # modulo operations do not need a dependency tree.
 [dependencies]
+
+[features]
+# Default is `fleet` ONLY — node identity, the one namespace that cannot diverge.
+default = []
+
+# Opt in to the THEMED realms (fantasy, forge, oracle, signal, stellar, tarot, void).
+#
+# The feature is named after the hazard rather than the capability, because enabling it is not
+# "turn on more realms" — it is "accept that this binding's version names disagree with the other
+# three". go/python/js ship generated embeds frozen 2026-04-05; this crate's table is generated
+# from `words/realms.json` as cut over to lexicon on 2026-05-07. Same arithmetic, different words:
+# `9e3779b1` is `Blazing Jewel` in Go/Python/JS and `Draconic Monolith` here.
+#
+# So a project consuming, say, the Go handler and this crate would publish two different version
+# names for one commit. That is a silent, plausible-looking wrong answer — the worst kind — so
+# reaching a themed realm requires writing this feature name into a Cargo.toml, where a reviewer
+# sees it.
+#
+# `fleet` is unaffected and ungated: it exists in NO other binding, so no other binding can produce
+# a conflicting node name.
+#
+# Resolving the divergence means re-running `sync-words.sh --all`, which renames version names in
+# candela, portal.realm.watch, coin.realm.watch and realmwatch. That is JP's call, not a
+# maintenance chore — version names are historical record and appear in commits and in speech.
+divergent-themed-realms = []

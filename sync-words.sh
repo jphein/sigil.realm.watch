@@ -164,9 +164,22 @@ L = [
     '',
 ]
 
+DIVERGENT_NOTE = (
+    '///',
+    '/// ⚠️ CORPUS-DIVERGENT from the go/python/js bindings, hence the feature gate. Those three',
+    '/// ship embeds frozen 2026-04-05, while this table is generated from `words/realms.json` as',
+    '/// cut over to lexicon on 2026-05-07. Same arithmetic, different words: `9e3779b1` is',
+    '/// `Blazing Jewel` there and `Draconic Monolith` here. A project consuming two bindings would',
+    '/// get two different version names for one commit, so this realm is OFF by default.',
+)
+
 for realm, words in sorted(data.items()):
     name = ident(realm)
+    themed = realm != 'fleet'
     L.append(f'/// The `{realm}` realm — {len(words["adjectives"])} adjectives / {len(words["nouns"])} nouns.')
+    if themed:
+        L.extend(DIVERGENT_NOTE)
+        L.append('#[cfg(feature = "divergent-themed-realms")]')
     L.append(f'pub static {name}: Realm = Realm {{')
     L.append(f'    name: "{realm}",')
     L.append('    adjectives: &[')
@@ -180,14 +193,28 @@ for realm, words in sorted(data.items()):
     L.append('};')
     L.append('')
 
-L.append('/// Every realm, sorted by name.')
+L.append('/// Every realm, sorted by name. Themed realms are corpus-divergent from the other')
+L.append('/// bindings, so this list only contains them when `divergent-themed-realms` is enabled.')
+L.append('#[cfg(feature = "divergent-themed-realms")]')
 L.append('pub static REALMS: &[&Realm] = &[')
 for realm in sorted(data):
     L.append(f'    &{ident(realm)},')
 L.append('];')
 L.append('')
+L.append('/// Without `divergent-themed-realms`, `fleet` is the only realm this crate will hand out —')
+L.append('/// node identity, which CANNOT diverge because `fleet` exists in no other binding.')
+L.append('#[cfg(not(feature = "divergent-themed-realms"))]')
+L.append('pub static REALMS: &[&Realm] = &[&FLEET];')
+L.append('')
 L.append("/// Look up a realm by name, falling back to `fantasy` for an unknown one — matching Go's")
 L.append('/// `GenerateName`, which falls back rather than erroring.')
+L.append('///')
+L.append('/// ⚠️ Only available with `divergent-themed-realms`. A name-based lookup is exactly how a')
+L.append('/// mixed-language project would silently acquire a divergent version name — it asks for')
+L.append('/// "fantasy" in two languages and gets two different answers. Without the feature there is')
+L.append('/// no way to reach a divergent realm at all, so the mistake is unrepresentable rather than')
+L.append('/// documented. Use [`FLEET`](crate::FLEET) directly for node identity.')
+L.append('#[cfg(feature = "divergent-themed-realms")]')
 L.append("pub const fn realm_by_name(name: &str) -> &'static Realm {")
 L.append('    let mut i = 0;')
 L.append('    while i < REALMS.len() {')
