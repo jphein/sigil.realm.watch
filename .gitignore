@@ -2,3 +2,12 @@ __pycache__/
 *.pyc
 node_modules/
 .env
+
+# Python build artifacts. A clean `pip install ./python` creates these in-tree; they are
+# derived output and must never be committed (a stale egg-info shadows the real package).
+python/build/
+python/dist/
+*.egg-info/
+
+# Rust build artifacts (the crate's target dir if anyone builds without CARGO_TARGET_DIR).
+rust/target/
