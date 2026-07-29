@@ -562,20 +562,27 @@ mod tests {
 
     /// ALGORITHM parity with Go, isolated from corpus drift.
     ///
-    /// This matters because a plain four-way comparison of `generate_name("9e3779b1", "fantasy")`
-    /// currently DISAGREES: Go, Python and JS all say `Blazing Jewel`, this crate says
-    /// `Draconic Monolith`. That is **not** an algorithm difference — it is corpus staleness.
-    /// go/python/js ship generated embeds frozen on 2026-04-05 (20 adj / 20 nouns), while
-    /// `words/realms.json` was cut over to lexicon on 2026-05-07 (28 / 25) and this crate is
-    /// generated from the current file. Same arithmetic, different table.
+    /// The four bindings **agree** as of the 2026-07-29 `sync-words.sh --all`:
+    /// `generate_name("9e3779b1", "fantasy")` is `Draconic Monolith · 9e3779b1` in go, python, js
+    /// and rust alike, verified by running each. Before that sync they disagreed — go/python/js
+    /// shipped embeds frozen on 2026-04-05 (20 adj / 20 nouns) while `words/realms.json` had been
+    /// cut over to lexicon on 2026-05-07 (28 / 25) — and this crate reported `Draconic Monolith`
+    /// where the others said `Blazing Jewel`.
     ///
-    /// So the parity worth testing is: *given the same words, do we compute the same index?* This
-    /// pins the 2026-04-05 fantasy corpus as a fixture and asserts we reproduce Go's live output
-    /// on it — including the u32 edges where JS used to return `undefined`.
+    /// That was never an algorithm difference; it was corpus staleness. Which is exactly why this
+    /// test is written the way it is, and why it stays that way now the corpora match: it pins the
+    /// 2026-04-05 fantasy corpus as an explicit **fixture** and asserts we reproduce Go's output on
+    /// it — including the u32 edges where JS used to return `undefined`. Testing the live corpus
+    /// instead would conflate two independent questions, and would pass for the wrong reason on any
+    /// day the tables happen to match.
     ///
-    /// ⚠️ `FLEET` is unaffected by the drift and cannot diverge: it does not exist in the stale
-    /// embeds at all, so no other binding can produce a conflicting node name. Node identity is
-    /// safe; only the themed (version-name) realms differ across bindings today.
+    /// So: *given the same words, do we compute the same index?* That question is worth asking
+    /// whether or not today's tables agree, and it is the one thing a future partial sync cannot
+    /// invalidate.
+    ///
+    /// ⚠️ `FLEET` could never diverge regardless: it does not exist in the other bindings at all,
+    /// so nothing can produce a conflicting node name. Node identity was safe even while the
+    /// version-name realms disagreed.
     #[test]
     fn algorithm_matches_go_given_the_same_corpus() {
         const STALE_FANTASY: Realm = Realm {
@@ -620,13 +627,33 @@ mod tests {
         assert_eq!(realm_by_name("fleet").name, "fleet");
     }
 
-    /// The DEFAULT build must expose exactly one realm — `fleet` — so a consumer cannot reach a
-    /// corpus-divergent themed realm without naming the hazard in its Cargo.toml. This is the
-    /// guard, and it is the reason the divergence is unrepresentable rather than documented.
+    /// The default build must expose only realms that **cannot** disagree with go/python/js, so a
+    /// consumer cannot reach a corpus-divergent realm without naming the hazard in its Cargo.toml.
+    /// That is the guard, and it is why the divergence is unrepresentable rather than merely
+    /// documented.
+    ///
+    /// This asserted `["creature", "fleet"]` until 2026-07-29, when `./sync-words.sh --all`
+    /// regenerated every binding from `words/realms.json` and the divergence went to **zero** —
+    /// two bindings generated from one source cannot disagree. So all nine realms are now
+    /// non-divergent and reachable by default, and the list below is the whole corpus.
+    ///
+    /// The test still earns its place: it is now a guard against divergence being *reintroduced*.
+    /// If a future partial sync (`--only rust`, say) makes a realm's words differ from the Go
+    /// embed, the generator gates that realm and it drops out of the default `REALMS` — and this
+    /// assertion fails, naming exactly which realm went divergent. Update it only after
+    /// confirming the drop was intended.
     #[cfg(not(feature = "divergent-themed-realms"))]
     #[test]
-    fn default_build_exposes_only_the_non_divergent_realm() {
+    fn default_build_exposes_only_non_divergent_realms() {
         let names: std::vec::Vec<&str> = REALMS.iter().map(|r| r.name).collect();
-        assert_eq!(names, ["creature", "fleet"], "only non-divergent realms may be reachable by default");
+        assert_eq!(
+            names,
+            [
+                "creature", "fantasy", "fleet", "forge", "oracle", "signal", "stellar", "tarot",
+                "void"
+            ],
+            "only non-divergent realms may be reachable by default — a realm missing here has \
+             gone corpus-divergent from go/python/js"
+        );
     }
 }

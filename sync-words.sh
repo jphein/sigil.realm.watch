@@ -144,7 +144,7 @@ fi
 # list. Heredoc rather than `python3 -c "…"` so nothing here depends on escaping quotes correctly.
 if want rust; then
 python3 - "$REALMS" "$RESERVED" <<'PYEOF'
-import json, sys
+import json, re, sys
 
 realms_path, reserved_path = sys.argv[1], sys.argv[2]
 with open(realms_path) as f:
@@ -166,11 +166,14 @@ L = [
 
 DIVERGENT_NOTE = (
     '///',
-    '/// ⚠️ CORPUS-DIVERGENT from the go/python/js bindings, hence the feature gate. Those three',
-    '/// ship embeds frozen 2026-04-05, while this table is generated from `words/realms.json` as',
-    '/// cut over to lexicon on 2026-05-07. Same arithmetic, different words: `9e3779b1` is',
-    '/// `Blazing Jewel` there and `Draconic Monolith` here. A project consuming two bindings would',
-    '/// get two different version names for one commit, so this realm is OFF by default.',
+    '/// ⚠️ CORPUS-DIVERGENT from the go/python/js bindings, hence the feature gate. This realm’s',
+    '/// words here differ from the generated Go embed, and indices are `% len(list)` — so the same',
+    '/// arithmetic over different lists yields a different name for the same hash. A project',
+    '/// consuming two bindings would publish two version names for one commit, so this realm is OFF',
+    '/// by default.',
+    '///',
+    '/// Emitted only when the words actually differ. If you are reading this, run',
+    '/// `./sync-words.sh --all` to converge every binding, or accept the gate deliberately.',
 )
 
 # Which realms are corpus-divergent from the other bindings? DERIVED, not listed: a realm can only
@@ -178,12 +181,42 @@ DIVERGENT_NOTE = (
 # embed exists nowhere else, so nothing can contradict it and it needs no gate. Deriving this means
 # every future identity-style namespace is automatically ungated, and nobody has to remember to add
 # it — a hardcoded `!= 'fleet'` would have silently gated `creature` the day it landed.
+#
+# ⚠️ Presence is NOT divergence, and testing presence broke `--all`.
+#
+# `--all` regenerates go/realms.go *before* rust, from this same words/realms.json. So by the time
+# this ran, every realm appeared in the Go embed — including `fleet` and `creature`, which had been
+# ungated precisely because Go lacked them — and all nine got gated behind
+# `divergent-themed-realms`. `lib.rs` references `realms::FLEET` and `realms::CREATURE`
+# unconditionally, so the crate stopped compiling: "cannot find value `FLEET` in module `realms`,
+# note: found an item that was configured out".
+#
+# Worse, the gate's premise had become false. Two bindings generated from one source cannot
+# disagree, so after a full sync the divergent set is empty by construction.
+#
+# So compare CONTENT, not presence. This keeps the derived-not-listed property that makes future
+# namespaces automatically correct, and restores the meaning the gate was written to carry — which
+# still matters for a partial sync like `--only rust`, the case it was designed for.
 try:
     go_embed = open('go/realms.go').read()
 except FileNotFoundError:
     go_embed = ''
+
+def _go_words(realm):
+    """Adjectives + nouns for `realm` as they appear in the generated Go embed."""
+    block = re.search(
+        r'"%s":\s*\{(.*?)\n\t\},' % re.escape(realm), go_embed, re.S
+    )
+    if not block:
+        return None
+    return re.findall(r'"([^"]*)"', block.group(1))
+
 def is_divergent(realm):
-    return f'"{realm}"' in go_embed
+    theirs = _go_words(realm)
+    if theirs is None:
+        return False  # absent there: nothing can contradict it
+    ours = list(data[realm]['adjectives']) + list(data[realm]['nouns'])
+    return theirs != ours
 
 for realm, words in sorted(data.items()):
     name = ident(realm)

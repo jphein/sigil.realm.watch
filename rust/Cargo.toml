@@ -16,26 +16,35 @@ path = "src/lib.rs"
 [dependencies]
 
 [features]
-# Default is `fleet` ONLY — node identity, the one namespace that cannot diverge.
+# Default exposes every realm that cannot disagree with go/python/js. As of the 2026-07-29
+# `sync-words.sh --all`, that is **all nine** — see below.
 default = []
 
-# Opt in to the THEMED realms (fantasy, forge, oracle, signal, stellar, tarot, void).
+# Opt in to realms whose corpus is CORPUS-DIVERGENT from the go/python/js bindings.
 #
 # The feature is named after the hazard rather than the capability, because enabling it is not
-# "turn on more realms" — it is "accept that this binding's version names disagree with the other
-# three". go/python/js ship generated embeds frozen 2026-04-05; this crate's table is generated
-# from `words/realms.json` as cut over to lexicon on 2026-05-07. Same arithmetic, different words:
-# `9e3779b1` is `Blazing Jewel` in Go/Python/JS and `Draconic Monolith` here.
-#
-# So a project consuming, say, the Go handler and this crate would publish two different version
-# names for one commit. That is a silent, plausible-looking wrong answer — the worst kind — so
-# reaching a themed realm requires writing this feature name into a Cargo.toml, where a reviewer
+# "turn on more realms" — it is "accept that this binding's version names may disagree with the
+# other three". Indices are `% len(list)`, so the same arithmetic over different word lists yields
+# a different name for the same hash, and a project consuming two bindings would publish two
+# version names for one commit. That is a silent, plausible-looking wrong answer — the worst kind —
+# so reaching such a realm requires writing this feature name into a Cargo.toml, where a reviewer
 # sees it.
 #
-# `fleet` is unaffected and ungated: it exists in NO other binding, so no other binding can produce
-# a conflicting node name.
+# ## As of 2026-07-29 the divergent set is EMPTY
 #
-# Resolving the divergence means re-running `sync-words.sh --all`, which renames version names in
-# candela, portal.realm.watch, coin.realm.watch and realmwatch. That is JP's call, not a
-# maintenance chore — version names are historical record and appear in commits and in speech.
+# `./sync-words.sh --all` regenerated every binding from `words/realms.json`, landing the
+# 2026-05-07 lexicon cutover that go/python/js had been frozen behind since 2026-04-05. All four
+# bindings now agree — verified directly: `9e3779b1` in `fantasy` is `Draconic Monolith · 9e3779b1`
+# in go, python, js and rust alike. Two bindings generated from one source cannot disagree, so no
+# realm is gated and this feature currently changes nothing about which realms exist.
+#
+# It is kept, not deleted, because the generator derives the gate from a **content** comparison
+# against the Go embed on every run. A future partial sync (`--only rust`) that changes one word
+# list re-gates exactly the affected realm, drops it from the default `REALMS`, and fails
+# `default_build_exposes_only_non_divergent_realms` with its name. The mechanism is the guard; the
+# empty set is just today's state.
+#
+# The one-time cost of converging was renaming the generated version name in candela,
+# portal.realm.watch, coin.realm.watch and realmwatch — those names are historical record and
+# appear in commits and in speech, which is why it was JP's call rather than a maintenance chore.
 divergent-themed-realms = []

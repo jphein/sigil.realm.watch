@@ -8,32 +8,40 @@ type Realm struct {
 }
 
 var Realms = map[string]Realm{
+	"creature": {
+		Adjectives: []string{"Amber", "Bashful", "Chittering", "Curious", "Dappled", "Downy", "Drowsy", "Feathered", "Furred", "Gentle", "Glimmering", "Hungry", "Inquisitive", "Lively", "Mossy", "Nimble", "Plucky", "Quick", "Restless", "Scruffy", "Skittish", "Speckled", "Tufted", "Whiskered"},
+		Nouns:      []string{"Sprite", "Wisp", "Moth", "Finch", "Wren", "Newt", "Vole", "Hare", "Fawn", "Cub", "Kit", "Imp", "Pika", "Shrew", "Marten", "Otter", "Gecko", "Skink", "Drake", "Wyrmling", "Pixie", "Brownie", "Kelpie", "Faun"},
+	},
 	"fantasy": {
-		Adjectives: []string{"Arcane", "Blazing", "Celestial", "Draconic", "Eldritch", "Fabled", "Gilded", "Hallowed", "Infernal", "Jade", "Kindled", "Luminous", "Mythic", "Noble", "Obsidian", "Primal", "Radiant", "Spectral", "Twilight", "Valiant"},
-		Nouns:      []string{"Aegis", "Beacon", "Crown", "Dominion", "Ember", "Forge", "Grimoire", "Herald", "Insignia", "Jewel", "Keystone", "Lantern", "Monolith", "Nexus", "Oracle", "Pinnacle", "Quartz", "Relic", "Sigil", "Throne"},
+		Adjectives: []string{"Ancient", "Arcane", "Blazing", "Brimming", "Celestial", "Draconic", "Eldritch", "Fabled", "Gilded", "Hallowed", "Hollow", "Infernal", "Jade", "Kindled", "Luminous", "Lunar", "Mystic", "Mythic", "Noble", "Obsidian", "Primal", "Radiant", "Runic", "Somber", "Spectral", "Twilight", "Valiant", "Woven"},
+		Nouns:      []string{"Aegis", "Beacon", "Crown", "Dominion", "Echo", "Ember", "Forge", "Grimoire", "Herald", "Hollow", "Insignia", "Jewel", "Keystone", "Lantern", "Monolith", "Nexus", "Oracle", "Pinnacle", "Pulsar", "Quartz", "Raven", "Relic", "Sigil", "Throne", "Warden"},
 	},
-	"tarot": {
-		Adjectives: []string{"Arcane", "Blessed", "Charmed", "Destined", "Enchanted", "Fateful", "Guiding", "Hidden", "Illumined", "Judging", "Karmic", "Liminal", "Moonlit", "Numbered", "Ordained", "Portentous", "Querent", "Reversed", "Starlit", "Turning"},
-		Nouns:      []string{"Amulet", "Blade", "Chalice", "Diviner", "Emperor", "Fool", "Guardian", "Hermit", "Initiate", "Justice", "Knight", "Lovers", "Magician", "Nomad", "Ouroboros", "Pentacle", "Querent", "Rosette", "Scepter", "Tower"},
-	},
-	"oracle": {
-		Adjectives: []string{"Augured", "Beckoning", "Clairvoyant", "Delphic", "Ethereal", "Foretold", "Glimpsed", "Hushed", "Intuited", "Judicious", "Knowing", "Lucid", "Murmured", "Nascent", "Omniscient", "Prophetic", "Quieted", "Resonant", "Scried", "Veiled"},
-		Nouns:      []string{"Augury", "Bones", "Cipher", "Doctrine", "Echo", "Foresight", "Gaze", "Hymn", "Insight", "Judgment", "Kenning", "Lens", "Mirror", "Notion", "Omen", "Prophecy", "Question", "Revelation", "Sight", "Truth"},
-	},
-	"void": {
-		Adjectives: []string{"Abyssal", "Boundless", "Collapsed", "Drifting", "Entropic", "Fractured", "Galactic", "Hollow", "Infinite", "Jagged", "Kinetic", "Liminal", "Muted", "Null", "Obsidian", "Phantom", "Quantum", "Ruptured", "Silent", "Twisted"},
-		Nouns:      []string{"Abyss", "Breach", "Cascade", "Drift", "Expanse", "Fragment", "Glitch", "Horizon", "Interval", "Junction", "Knot", "Lattice", "Membrane", "Nexus", "Orbit", "Paradox", "Rift", "Shade", "Threshold", "Vertex"},
+	"fleet": {
+		Adjectives: []string{"Ancient", "Arcane", "Argent", "Ashen", "Blazing", "Brimming", "Celestial", "Draconic", "Eldritch", "Fabled", "Gilded", "Hallowed", "Hollow", "Infernal", "Jade", "Kindled", "Luminous", "Lunar", "Mystic", "Mythic", "Noble", "Obsidian", "Primal", "Radiant", "Runic", "Seraphic", "Somber", "Spectral", "Twilight", "Umbral", "Valiant", "Woven"},
+		Nouns:      []string{"Aegis", "Bastion", "Brazier", "Cairn", "Chalice", "Citadel", "Diadem", "Dominion", "Echo", "Ember", "Glyph", "Grimoire", "Insignia", "Jewel", "Keystone", "Lantern", "Lodestar", "Monolith", "Nexus", "Obelisk", "Orrery", "Pinnacle", "Pulsar", "Quartz", "Raven", "Relic", "Sanctum", "Spire", "Talisman", "Throne", "Vigil", "Warden"},
 	},
 	"forge": {
-		Adjectives: []string{"Annealed", "Bolted", "Carbonized", "Dense", "Electric", "Flux", "Galvanized", "Hardened", "Ignited", "Joined", "Keen", "Laminated", "Molten", "Nitrided", "Oxidized", "Pressed", "Quenched", "Riveted", "Sintered", "Tempered"},
-		Nouns:      []string{"Anvil", "Bellows", "Crucible", "Die", "Engine", "Furnace", "Gear", "Hammer", "Ingot", "Jig", "Kiln", "Lathe", "Mandrel", "Nozzle", "Oven", "Piston", "Quench", "Rivet", "Spark", "Tongs"},
+		Adjectives: []string{"Molten", "Hammered", "Tempered", "Forged", "Glowing", "Smoldering", "Sparking", "Kilned", "Ironclad", "Wrought", "Bellowed", "Anvilled", "White-Hot", "Smelted"},
+		Nouns:      []string{"Forge", "Anvil", "Kiln", "Quench", "Hammer", "Smithy", "Smelter", "Ironheart", "Wright", "Crucible", "Bellows", "Mold", "Ingot", "Foundry"},
+	},
+	"oracle": {
+		Adjectives: []string{"Augural", "Fated", "Prescient", "Sibylline", "Dreaming", "Prophetic", "Foretold", "Whispered", "Veiled", "Divining", "Foreseen", "Omened", "Occult", "Scrying"},
+		Nouns:      []string{"Oracle", "Augur", "Sibyl", "Prophet", "Omen", "Vision", "Harbinger", "Dreamer", "Seer", "Scrying", "Prophecy", "Runecast", "Soothsayer", "Divination"},
 	},
 	"signal": {
-		Adjectives: []string{"Amplified", "Broadcast", "Channeled", "Decoded", "Echoing", "Filtered", "Grounded", "Harmonic", "Isolated", "Jittered", "Keyed", "Latched", "Modulated", "Narrowed", "Oscillating", "Pulsed", "Quantized", "Relayed", "Synced", "Tuned"},
-		Nouns:      []string{"Antenna", "Beacon", "Carrier", "Diode", "Emitter", "Frequency", "Gate", "Harmonic", "Impulse", "Junction", "Keystone", "Link", "Modem", "Node", "Oscillator", "Pulse", "Qubit", "Relay", "Signal", "Transponder"},
+		Adjectives: []string{"Amplified", "Beaconing", "Blinking", "Broadcast", "Broadcasting", "Channeled", "Channelled", "Decoded", "Echoing", "Encrypted", "Filtered", "Grounded", "Harmonic", "Humming", "Isolated", "Jittered", "Keyed", "Latched", "Looping", "Modulated", "Narrowed", "Oscillating", "Pulsed", "Pulsing", "Quantized", "Relayed", "Resonant", "Synced", "Syncing", "Tuned"},
+		Nouns:      []string{"Antenna", "Beacon", "Broadcast", "Carrier", "Channel", "Diode", "Emitter", "Frequency", "Gate", "Harbor", "Harmonic", "Impulse", "Junction", "Keystone", "Lattice", "Lighthouse", "Link", "Modem", "Node", "Oscillator", "Packet", "Ping", "Pulsar", "Pulse", "Qubit", "Relay", "Semaphore", "Signal", "Telegraph", "Transponder"},
 	},
 	"stellar": {
-		Adjectives: []string{"Ascending", "Binary", "Cosmic", "Distant", "Expanding", "Flaring", "Graviton", "Helical", "Ionized", "Jovian", "Kepler", "Lunar", "Magnetic", "Nebular", "Orbital", "Pulsating", "Quantum", "Radiant", "Solar", "Tidal"},
-		Nouns:      []string{"Aurora", "Bolide", "Corona", "Dwarf", "Eclipse", "Firmament", "Galaxy", "Halo", "Ion", "Jet", "Kuiper", "Luminance", "Meteor", "Nova", "Orbit", "Pulsar", "Quasar", "Remnant", "Supernova", "Zenith"},
+		Adjectives: []string{"Stellar", "Nebular", "Orbital", "Cosmic", "Gleaming", "Supernal", "Luminous", "Twinkling", "Celestial", "Gravitational", "Eclipsed", "Comet-Borne", "Equinoctial", "Far-Flung"},
+		Nouns:      []string{"Nova", "Quasar", "Nebula", "Comet", "Orbit", "Solstice", "Zenith", "Meridian", "Constellation", "Supernova", "Parallax", "Lensing", "Perihelion", "Eclipse"},
+	},
+	"tarot": {
+		Adjectives: []string{"Arcane", "Suspended", "Towering", "Fated", "Foolish", "Judged", "Hierophantic", "Crowned", "Reversed", "Illumined", "Querent", "Esoteric", "Hermetic", "Drawn"},
+		Nouns:      []string{"Arcana", "Fool", "Hierophant", "Hanged", "Tower", "Star", "Sun", "Moon", "Judgement", "World", "Wheel", "Chariot", "Hermit", "Magician"},
+	},
+	"void": {
+		Adjectives: []string{"Hushed", "Unmade", "Vacant", "Silent", "Drifting", "Eclipsing", "Lost", "Shrouded", "Fading", "Hollowed", "Absent", "Devoured", "Untold", "Dimming"},
+		Nouns:      []string{"Abyss", "Hollow", "Eclipse", "Drift", "Hush", "Shroud", "Silence", "Chasm", "Umbra", "Threshold", "Rift", "Cipher", "Vanishment", "Absence"},
 	},
 }
