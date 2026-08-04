@@ -109,7 +109,14 @@ print(json.dumps(d))
   META_ESCAPED=$(printf '%s' "$META_CONTENT" | sed 's/[&/\]/\\&/g')
   META_TAG="<meta name=\"realm-version\" content='${META_ESCAPED}'>"
 
-  if grep -q 'name="realm-version"' "$HTML"; then
+  # Anchor on the OPENING TAG, not the bare attribute. A page that reads its own
+  # sigil contains the string `name="realm-version"` in JS —
+  #     document.querySelector('meta[name="realm-version"]')
+  # — so a bare-attribute grep matched, the update branch ran, and the
+  # `<meta ...>` sed found nothing to replace. Result: no tag injected, and
+  # "✓ Updated meta tag" printed anyway. Silent no-op, and self-version-checking
+  # pages are exactly the ones that need the tag most (jphein/sconce, 2026-08-04).
+  if grep -q '<meta[[:space:]]\+name="realm-version"' "$HTML"; then
     # Update existing
     sed -i "s|<meta name=\"realm-version\"[^>]*>|${META_TAG}|" "$HTML"
     echo -e "  ${DIM}✓ Updated meta tag in $HTML${RESET}"
@@ -119,6 +126,13 @@ print(json.dumps(d))
     echo -e "  ${DIM}✓ Injected meta tag into $HTML${RESET}"
   else
     echo -e "  ${DIM}⚠ No </head> found in $HTML — skipping meta injection${RESET}"
+  fi
+
+  # Never report success on a page that ends up unstamped — the whole point is
+  # that a consumer can trust the tag is there.
+  if ! grep -q '<meta[[:space:]]\+name="realm-version"' "$HTML"; then
+    echo -e "  ⚠ ERROR: $HTML has no realm-version tag after injection" >&2
+    exit 1
   fi
 fi
 
