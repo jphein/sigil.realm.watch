@@ -153,9 +153,27 @@ pub const fn name_for_id(id: u8, realm: &Realm) -> (&'static str, &'static str) 
     name_for_seed(seed_from_id(id), realm)
 }
 
-/// `(adjective, noun)` from a hex string — parity with Go's `GenerateName(hash, realm)` and
-/// Python's `generate_name`. Non-hex characters are skipped, matching Go's tolerant `parseHex`;
-/// `"dev"` therefore yields seed 0, as it does in Python.
+/// `(adjective, noun)` from a hex string — parity with Go's `GenerateName(hash, realm)`. Non-hex
+/// characters are skipped, matching Go's tolerant `parseHex`.
+///
+/// ⚠️ **Parity holds over hex input, and NOT over anything else.** Measured 2026-08-14 across all
+/// nine realms × 163 hex inputs (u32 edges, >8-char seeds, lengths 1–16, real build hashes): rust,
+/// go and js are byte-identical on every case. Python agrees there too — but the three tolerant
+/// bindings and Python part company the moment the input is not hex:
+///
+/// | input   | rust / go / js        | python                        |
+/// |---------|-----------------------|-------------------------------|
+/// | `"dev"` | seed 222 (`d`,`e`)    | seed 0 — special-cased literal|
+/// | `""`    | seed 0                | **raises** `ValueError`       |
+///
+/// So an unstamped build named through this crate and through `realm_sigil.generate_name` gets two
+/// different names. Consumers should publish no sigil at all for an unstamped build rather than
+/// pick one (hearthd does exactly that); see realm-sigil issue #9.
+///
+/// This doc previously read *"`\"dev\"` therefore yields seed 0, as it does in Python"* — which was
+/// wrong about this crate in the same breath as it was right about Python, while the test three
+/// screens down asserted `parse_hex("dev") == 0xde`. A parity claim with no stated input domain is
+/// how that survives.
 pub const fn name_for_hex(hash: &str, realm: &Realm) -> (&'static str, &'static str) {
     // Full u64 seed, matching Go's GenerateName exactly. The prior `as u32`
     // truncation only agreed with Go for <=8-hex-char seeds (which fit in 32
