@@ -3,6 +3,14 @@ name = "sigil.realm.watch"
 version = "1.0.0"
 description = "Deterministic magical version name generation for JP's projects"
 requires-python = ">=3.11"
+# Declared as a CLASSIFIER, not `license = "…"` or `license = {text = …}`, on purpose. The build
+# pins only `setuptools>=68` with no upper bound, so a fresh build resolves the newest setuptools:
+# the SPDX-string form needs >=77, and the table form is deprecated there. A classifier is inert
+# metadata that both ends of that range accept, and this file has already cost one total install
+# failure (see the build-backend note below) — it is not the place to take a compatibility bet.
+classifiers = [
+    "License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)",
+]
 
 [build-system]
 requires = ["setuptools>=68.0"]

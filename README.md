@@ -265,4 +265,6 @@ node -e "const {generateName} = require('./js'); console.log(generateName('abc12
 
 ## License
 
-[GPLv3](LICENSE)
+[LGPL-3.0-only](COPYING.LESSER) — the GPLv3 base ([COPYING](COPYING)) plus the LGPL's additional
+permissions, so any project may link this library regardless of its own licence. That is the point
+of the choice: sigil is consumed from Go, Python, JS and vendored into `no_std` firmware.

@@ -3,8 +3,19 @@ name = "realm-sigil"
 version = "0.1.0"
 edition = "2021"
 description = "Deterministic magical name generation — the Rust binding. no_std, no alloc, no deps."
-license = "MIT"
-repository = "https://github.com/jphein/realm-sigil"
+# LGPL-3.0-only, matching COPYING + COPYING.LESSER at the repo root. This said `MIT` from the day
+# the crate landed (9b78c73) and stayed MIT through the relicense (e7fe516), which swept the licence
+# FILES and no manifest — js still said `GPL-3.0-only`, the README still linked a `LICENSE` that had
+# been renamed to `COPYING`. Four surfaces, four answers, none of them the repo's licence.
+#
+# `MIT` was not a deliberate permissive carve-out for firmware: e7fe516 moved to LGPL *precisely so*
+# smol's `no_std` vendoring could link it from any licence, which makes a separate MIT exception for
+# this one crate both unnecessary and undocumented. `-only` rather than `-or-later` because nothing
+# here grants future versions, and it matches the form js already used.
+license = "LGPL-3.0-only"
+# Canonical remote. `jphein/realm-sigil` resolves — GitHub redirects renamed repositories — so this
+# was never broken, only non-canonical, which is the kind of wrong that survives a click-test.
+repository = "https://github.com/jphein/sigil.realm.watch"
 
 [lib]
 name = "realm_sigil"
