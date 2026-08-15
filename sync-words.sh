@@ -176,6 +176,16 @@ DIVERGENT_NOTE = (
     '/// `./sync-words.sh --all` to converge every binding, or accept the gate deliberately.',
 )
 
+THEMED_NOTE = (
+    '///',
+    '/// Gated: this realm names a **build**, not a thing. Its words currently agree with the',
+    '/// go/python/js embeds, but that agreement is a maintained property rather than a structural',
+    '/// one, so reaching it requires writing `divergent-themed-realms` into a Cargo.toml where a',
+    '/// reviewer sees it. The static is not merely hidden — it is not emitted at all without the',
+    '/// feature, so a default build carries none of these words in `.rodata`, which matters to the',
+    '/// firmware consumers this binding exists for.',
+)
+
 # Which realms are corpus-divergent from the other bindings? DERIVED, not listed: a realm can only
 # disagree with go/python/js if those bindings HAVE it. A realm absent from the (frozen) generated Go
 # embed exists nowhere else, so nothing can contradict it and it needs no gate. Deriving this means
@@ -197,10 +207,19 @@ DIVERGENT_NOTE = (
 # So compare CONTENT, not presence. This keeps the derived-not-listed property that makes future
 # namespaces automatically correct, and restores the meaning the gate was written to carry — which
 # still matters for a partial sync like `--only rust`, the case it was designed for.
+# `go/realms.go` is TRACKED. An absent one means this run is wrong — bad cwd, partial checkout —
+# not that nothing can diverge. Folding that UNKNOWN into "not divergent" would ungate every realm
+# while printing success: a gate that cannot say "I could not tell" eventually says "fine" when it
+# means "I did not look". So it is a hard error, distinct from a realm genuinely absent from the
+# embed (which `_go_words` still reports as None, and which really does mean nothing can contradict
+# it).
 try:
     go_embed = open('go/realms.go').read()
 except FileNotFoundError:
-    go_embed = ''
+    sys.exit(
+        'go/realms.go is missing, so the divergence gate cannot be derived. Refusing to generate '
+        'an ungated corpus on a guess — run from a full checkout.'
+    )
 
 def _go_words(realm):
     """Adjectives + nouns for `realm` as they appear in the generated Go embed."""
@@ -218,12 +237,37 @@ def is_divergent(realm):
     ours = list(data[realm]['adjectives']) + list(data[realm]['nouns'])
     return theirs != ours
 
+# Which realms may a consumer reach WITHOUT writing the hazard into its Cargo.toml?
+#
+# Only the IDENTITY realms — the ones naming a *thing* (a board, a familiar) rather than a *build*.
+# That is a taxonomy, and a taxonomy is curated rather than derived: nothing in words/realms.json
+# marks a realm as identity-or-themed, and the signal that used to stand in for it is gone.
+#
+# ⚠️ The old criterion — "exists in no other binding, so nothing can contradict it" — EXPIRED on
+# 2026-07-29, when `--all` wrote `fleet` and `creature` into go/python/js. Every realm now exists in
+# every binding, so presence selects the EMPTY set, and it cannot be revived by comparing against
+# the Go embed because `--all` regenerates that embed before this runs (the 7cd4e46 bug). The
+# premise moved and the conclusion did not: the default list silently widened from two realms to
+# nine, and `REALMS` began handing out `&FORGE` to callers that `lib.rs` refuses to give `FORGE`.
+#
+# Listing the taxonomy therefore FAILS CLOSED: a realm added upstream is themed until someone says
+# otherwise, so a new build-provenance realm cannot leak by omission. A new IDENTITY realm omitted
+# here fails loudly instead — absent from the default `REALMS`, its consumer stops compiling.
+IDENTITY_REALMS = {'creature', 'fleet'}
+
 for realm, words in sorted(data.items()):
     name = ident(realm)
-    themed = is_divergent(realm)
+    divergent = is_divergent(realm)
+    # Gate a realm if it names a build, OR if its words have drifted from the Go embed. The second
+    # is the tripwire a partial sync trips; the first is the standing rule. Both produce the same
+    # `#[cfg]`, so a themed realm that also goes divergent is gated once, not twice.
+    themed = realm not in IDENTITY_REALMS
     L.append(f'/// The `{realm}` realm — {len(words["adjectives"])} adjectives / {len(words["nouns"])} nouns.')
-    if themed:
+    if divergent:
         L.extend(DIVERGENT_NOTE)
+    elif themed:
+        L.extend(THEMED_NOTE)
+    if divergent or themed:
         L.append('#[cfg(feature = "divergent-themed-realms")]')
     L.append(f'pub static {name}: Realm = Realm {{')
     L.append(f'    name: "{realm}",')
@@ -238,20 +282,34 @@ for realm, words in sorted(data.items()):
     L.append('};')
     L.append('')
 
-L.append('/// Every realm, sorted by name. Themed realms are corpus-divergent from the other')
-L.append('/// bindings, so this list only contains them when `divergent-themed-realms` is enabled.')
+L.append('/// EVERY realm, sorted by name — the identity realms plus the themed, build-provenance')
+L.append('/// ones. Reachable only with `divergent-themed-realms`; the default list below is the')
+L.append('/// identity subset.')
 L.append('#[cfg(feature = "divergent-themed-realms")]')
 L.append('pub static REALMS: &[&Realm] = &[')
 for realm in sorted(data):
     L.append(f'    &{ident(realm)},')
 L.append('];')
 L.append('')
-non_divergent = sorted(r for r in data if not is_divergent(r))
-L.append('/// Without `divergent-themed-realms`, only the realms that exist in NO other binding are')
-L.append('/// handed out — they cannot diverge, so nothing else can contradict a name they produce.')
+default_realms = sorted(r for r in data if r in IDENTITY_REALMS and not is_divergent(r))
+if not default_realms:
+    sys.exit(
+        'no identity realm survived the divergence check, so the default build would expose no '
+        'realm at all. Converge the bindings with `--all` before regenerating rust.'
+    )
+L.append('/// Without `divergent-themed-realms`, only the IDENTITY realms are handed out — the ones')
+L.append('/// naming a *thing* (a board, a familiar) rather than a *build*. A themed realm reached')
+L.append('/// from here would be a version name acquired without the Cargo.toml declaration that')
+L.append('/// makes the hazard visible to a reviewer, which is the entire point of the gate.')
+L.append('///')
+L.append('/// ⚠️ NOT "realms that exist in no other binding". That was the criterion until')
+L.append('/// 2026-07-29, when `--all` wrote `fleet` and `creature` into go/python/js — every realm')
+L.append('/// now exists in all four bindings, so these two can diverge like any other. What keeps')
+L.append('/// them default is what they NAME; the derived content check below still gates them if')
+L.append('/// their words drift from the Go embed.')
 L.append('#[cfg(not(feature = "divergent-themed-realms"))]')
 L.append('pub static REALMS: &[&Realm] = &[')
-for realm in non_divergent:
+for realm in default_realms:
     L.append(f'    &{ident(realm)},')
 L.append('];')
 L.append('')
@@ -260,9 +318,10 @@ L.append('/// `GenerateName`, which falls back rather than erroring.')
 L.append('///')
 L.append('/// ⚠️ Only available with `divergent-themed-realms`. A name-based lookup is exactly how a')
 L.append('/// mixed-language project would silently acquire a divergent version name — it asks for')
-L.append('/// "fantasy" in two languages and gets two different answers. Without the feature there is')
-L.append('/// no way to reach a divergent realm at all, so the mistake is unrepresentable rather than')
-L.append('/// documented. Use [`FLEET`](crate::FLEET) directly for node identity.')
+L.append('/// "fantasy" in two languages and gets two different answers. Without the feature no themed')
+L.append('/// realm is reachable at all — not through this function and not through `REALMS` — so the')
+L.append('/// mistake is unrepresentable rather than documented. Use [`FLEET`](crate::FLEET) directly')
+L.append('/// for node identity.')
 L.append('#[cfg(feature = "divergent-themed-realms")]')
 L.append("pub const fn realm_by_name(name: &str) -> &'static Realm {")
 L.append('    let mut i = 0;')
