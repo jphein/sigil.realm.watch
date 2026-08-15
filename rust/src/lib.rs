@@ -150,7 +150,14 @@ pub const fn name_for_id(id: u8, realm: &Realm) -> (&'static str, &'static str) 
 /// Python's `generate_name`. Non-hex characters are skipped, matching Go's tolerant `parseHex`;
 /// `"dev"` therefore yields seed 0, as it does in Python.
 pub const fn name_for_hex(hash: &str, realm: &Realm) -> (&'static str, &'static str) {
-    name_for_seed(parse_hex(hash) as u32, realm)
+    // Full u64 seed, matching Go's GenerateName exactly. The prior `as u32`
+    // truncation only agreed with Go for <=8-hex-char seeds (which fit in 32
+    // bits); a 12-char build hash overflows u32 and diverged — Go "Molten
+    // Smelter" vs Rust "Tempered Bellows" for the same commit.
+    let seed = parse_hex(hash);
+    let a = (seed % realm.adjectives.len() as u64) as usize;
+    let n = ((seed >> 8) % realm.nouns.len() as u64) as usize;
+    (realm.adjectives[a], realm.nouns[n])
 }
 
 /// Tolerant hex parse, mirroring Go's `parseHex`: accumulate hex digits, ignore anything else.
@@ -436,6 +443,20 @@ mod tests {
             );
         }
         assert_eq!(seen.len(), 256);
+    }
+
+    /// Regression for the u32-truncation bug. `forge` has 13 adjectives / 14
+    /// nouns (non-power-of-2), so the HIGH bits of a >8-char hash affect the
+    /// modulo — truncating the seed to u32 gave "Tempered Bellows" where Go/JS
+    /// give "Molten Smelter" for the same commit. Power-of-2 realms (FLEET=32)
+    /// hid it, because the modulo there only touches the low bits u32 preserves.
+    #[cfg(feature = "divergent-themed-realms")]
+    #[test]
+    fn hex_seed_uses_full_u64_matching_go() {
+        let forge = realm_by_name("forge");
+        assert_eq!(name_for_hex("a7af54e4b004", forge), ("Molten", "Smelter"));
+        // 8-char seeds fit in u32 and were already correct — must stay so:
+        assert_eq!(name_for_hex("34b12f9a", forge), ("Sparking", "Smithy"));
     }
 
     #[test]
