@@ -1,0 +1,67 @@
+name: Rust
+
+# The Rust binding's tests had never run in CI. `corpus.yml` checks that the WORD LISTS agree
+# across bindings — deliberately toolchain-free, so it cannot be defeated by a binding that fails
+# to build — but nothing compiled this crate or executed a single one of its assertions.
+#
+# That gap was found the expensive way on 2026-08-15: a reviewer reported `cargo test
+# --all-features` as green while the test guarding the feature gate had been COMPILED OUT of that
+# very run, because it was `#[cfg(not(feature = …))]`. A test that does not exist cannot fail, and
+# `--all-features` is the instinct of anyone trying to be thorough.
+#
+# ## Why BOTH configurations run, and why that is not belt-and-braces
+#
+# The gate test itself is now `cfg!(…)` rather than `#[cfg(…)]`, so it is compiled into every
+# configuration and no feature selection can delete it. One run would therefore prove the gate.
+#
+# But other assertions in this crate are legitimately configuration-specific and cannot be:
+# `hex_seed_uses_full_u64_matching_go` and `identity_vs_provenance_overlaps_are_a_shrinking_list`
+# need the themed realms to exist at all, so they only compile WITH the feature — while the
+# default build is the configuration every firmware consumer actually ships. Neither invocation
+# alone executes everything. Running exactly two, named, is what stops the pair silently degrading
+# to whichever half a runner happened to pick.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'rust/**'
+      - '.github/workflows/rust.yml'
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false # a failure in one configuration must not hide the other's result
+      matrix:
+        include:
+          - name: default (what firmware consumers ship)
+            flags: ''
+          - name: divergent-themed-realms (what a version endpoint enables)
+            flags: '--all-features'
+    name: ${{ matrix.name }}
+    defaults:
+      run:
+        working-directory: rust
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Toolchain
+        run: rustup component add clippy
+
+      # `--no-fail-fast`: a skipped target is not a passed one.
+      - name: Test
+        run: cargo test --no-fail-fast ${{ matrix.flags }}
+
+      - name: Clippy
+        run: cargo clippy --all-targets ${{ matrix.flags }} -- -D warnings
+
+      # The crate is `no_std` and exists to be linked into bare-metal firmware. Building it for the
+      # host only would let a `std`-dependent regression through, since `#[cfg(test)] extern crate
+      # std` means the TEST harness legitimately links std and the library must not.
+      - name: Build for a bare-metal target (no_std is the point)
+        run: |
+          rustup target add riscv32imc-unknown-none-elf
+          cargo build --target riscv32imc-unknown-none-elf ${{ matrix.flags }}
