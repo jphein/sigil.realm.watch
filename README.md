@@ -23,7 +23,7 @@ f0f0f0f  →  "Pulsating Pulsar · f0f0f0f" (stellar)
 ### Go
 
 ```go
-import sigil "github.com/jphein/realm-sigil/go"
+import sigil "github.com/jphein/sigil.realm.watch/go"
 
 // One-liner HTTP handler
 http.Handle("/api/version", sigil.Handler("myapp", "My Application", "fantasy", "https://github.com/jphein/myapp"))
@@ -32,14 +32,21 @@ http.Handle("/api/version", sigil.Handler("myapp", "My Application", "fantasy", 
 Inject build info via ldflags in your Makefile:
 
 ```makefile
-LDFLAGS := -X 'github.com/jphein/realm-sigil/go.Hash=$(shell git rev-parse --short HEAD)' \
-           -X 'github.com/jphein/realm-sigil/go.Branch=$(shell git rev-parse --abbrev-ref HEAD)' \
-           -X 'github.com/jphein/realm-sigil/go.Dirty=$(shell git diff --quiet && echo false || echo true)' \
-           -X 'github.com/jphein/realm-sigil/go.Built=$(shell date -u +%Y-%m-%dT%H:%M:%SZ)'
+LDFLAGS := -X 'github.com/jphein/sigil.realm.watch/go.Hash=$(shell git rev-parse --short HEAD)' \
+           -X 'github.com/jphein/sigil.realm.watch/go.Branch=$(shell git rev-parse --abbrev-ref HEAD)' \
+           -X 'github.com/jphein/sigil.realm.watch/go.Dirty=$(shell git diff --quiet && echo false || echo true)' \
+           -X 'github.com/jphein/sigil.realm.watch/go.Built=$(shell date -u +%Y-%m-%dT%H:%M:%SZ)'
 
 build:
 	go build -ldflags "$(LDFLAGS)" -o myapp .
 ```
+
+> **The package path in `-X` must match the module path exactly.** The Go linker
+> silently ignores `-X importpath.Var=value` when the symbol does not exist — no
+> warning, exit status 0 — so a wrong path yields a binary that reports
+> `hash "dev"`, `branch "unknown"` while the build and deploy both look successful.
+> Confirm with `go tool nm <binary> | grep sigil`: the paths it lists must be the
+> ones your ldflags write to.
 
 ### Python
 
