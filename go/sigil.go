@@ -13,10 +13,10 @@ import (
 // Build-time variables injected via ldflags.
 // Example Makefile:
 //
-//	LDFLAGS := -X 'github.com/jphein/realm-sigil/go.Hash=$(shell git rev-parse --short HEAD)' \
-//	           -X 'github.com/jphein/realm-sigil/go.Branch=$(shell git rev-parse --abbrev-ref HEAD)' \
-//	           -X 'github.com/jphein/realm-sigil/go.Dirty=$(shell git diff --quiet && echo false || echo true)' \
-//	           -X 'github.com/jphein/realm-sigil/go.Built=$(shell date -u +%Y-%m-%dT%H:%M:%SZ)'
+//	LDFLAGS := -X 'github.com/jphein/sigil.realm.watch/go.Hash=$(shell git rev-parse --short HEAD)' \
+//	           -X 'github.com/jphein/sigil.realm.watch/go.Branch=$(shell git rev-parse --abbrev-ref HEAD)' \
+//	           -X 'github.com/jphein/sigil.realm.watch/go.Dirty=$(shell git diff --quiet && echo false || echo true)' \
+//	           -X 'github.com/jphein/sigil.realm.watch/go.Built=$(shell date -u +%Y-%m-%dT%H:%M:%SZ)'
 var (
 	Hash   = "dev"
 	Branch = "unknown"
