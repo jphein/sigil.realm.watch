@@ -54,6 +54,30 @@ function realm_sigil_version_response() {
         'theme'       => $theme->get('Name') . ' ' . $theme->get('Version'),
     ];
 
+    // Optional server-only field: the root filesystem's size and free space, so a fleet view
+    // (realmwatch /updates/fleet) can flag a filling disk. Inside the wordpress container `/` is
+    // overlayfs, and statfs on it reports the HOST's root filesystem (verified on tow2 2026-10-21:
+    // container and host df agree). free_bytes is what non-root can still write (df's Avail);
+    // used_pct = 1 - free/total, so it reads about 1 point under df's Use% (root-reserved blocks).
+    // PHP 8 removes functions listed in disable_functions, and calling one throws, so check first:
+    // a host that disables them just omits the field instead of breaking the whole endpoint.
+    if (function_exists('disk_total_space') && function_exists('disk_free_space')) {
+        try {
+            $total = @disk_total_space('/');
+            $free = @disk_free_space('/');
+            if ($total && $free !== false) {
+                $response['disk'] = [
+                    'path'        => '/',
+                    'total_bytes' => (int) $total,
+                    'free_bytes'  => (int) $free,
+                    'used_pct'    => round(100 * (1 - $free / $total), 1),
+                ];
+            }
+        } catch (\Throwable $e) {
+            // optional field: leave it out
+        }
+    }
+
     return new WP_REST_Response($response, 200, [
         'Cache-Control' => 'no-cache',
         'Access-Control-Allow-Origin' => '*',
