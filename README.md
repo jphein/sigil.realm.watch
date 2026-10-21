@@ -178,6 +178,10 @@ All handlers return the same JSON shape:
 
 Static sites omit server-only fields (`started`, `uptime`, `runtime`, `os`, `host`, `pid`).
 
+Optional server-only field `disk`, currently emitted by the WordPress plugin only, describes the root filesystem:
+`{"path": "/", "total_bytes": …, "free_bytes": …, "used_pct": 85.0}`. `free_bytes` is the space non-root can still write.
+Consumers must treat it as optional.
+
 ## Realms
 
 Each realm has 20 adjectives and 20 nouns, giving 400 unique combinations per realm.
