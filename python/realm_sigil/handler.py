@@ -10,7 +10,7 @@ import threading
 import time
 from datetime import datetime, timezone
 
-from . import generate_name, version_dict
+from . import DESCRIBE_ARGS, generate_name, version_dict
 
 _start_time = time.time()
 _start_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -24,7 +24,10 @@ GIT_TIMEOUT = 5
 # hanging git costs one request a timeout instead of serializing every request behind it.
 GIT_RETRY_AFTER = 30
 
-_UNKNOWN = {"hash": "dev", "branch": "unknown", "dirty": False}
+_UNKNOWN = {"hash": "dev", "branch": "unknown", "dirty": False, "describe": ""}
+
+# git describe's "there is no tag to describe with" messages (LC_ALL=C): an answer, not a failure.
+_NO_TAG = ("No names found", "No tags can describe")
 
 # abs project_dir -> (info, retry_at). retry_at is None for a good probe: it is kept for the
 # life of the process. This is a PROCESS-START SNAPSHOT, not live repository status: the code
@@ -47,10 +50,10 @@ def _reset_git_cache() -> None:
 def _probe_git(cwd: str) -> tuple[dict, bool]:
     """Run the three git probes. Returns (info, complete); incomplete results are retried."""
 
-    def run(*args: str) -> subprocess.CompletedProcess:
+    def run(*args: str, env: dict | None = None) -> subprocess.CompletedProcess:
         return subprocess.run(
             ["git", *args], capture_output=True, text=True, errors="replace", cwd=cwd,
-            timeout=GIT_TIMEOUT, stdin=subprocess.DEVNULL,
+            timeout=GIT_TIMEOUT, stdin=subprocess.DEVNULL, env=env,
         )
 
     try:
@@ -63,6 +66,12 @@ def _probe_git(cwd: str) -> tuple[dict, bool]:
         branch = run("rev-parse", "--abbrev-ref", "HEAD")
         # `status --porcelain` sees untracked files; `git diff --quiet` did not.
         status = run("status", "--porcelain", "--untracked-files=normal")
+        # No version tag is the normal case for most projects: git exits 128 with one of _NO_TAG's messages, and
+        # that is a complete answer (describe ""). Any OTHER failure is transient as far as we can tell, so the probe
+        # is incomplete and retried after GIT_RETRY_AFTER rather than pinning an empty semver for the process
+        # lifetime (xreview 11-13). LC_ALL=C so the message is matchable. GIT_TIMEOUT bounds each call, not the
+        # probe: four calls can take up to 4 x GIT_TIMEOUT once.
+        describe = run(*DESCRIBE_ARGS, env=dict(os.environ, LC_ALL="C", LANGUAGE="C"))
     except (OSError, subprocess.SubprocessError):
         # git missing, cwd gone, or a call timed out.
         return dict(_UNKNOWN), False
@@ -71,10 +80,12 @@ def _probe_git(cwd: str) -> tuple[dict, bool]:
         "hash": head.stdout.strip() or "dev",
         "branch": branch.stdout.strip() or "unknown",
         "dirty": bool(status.stdout.strip()),
+        "describe": describe.stdout.strip() if describe.returncode == 0 else "",
     }
+    described = describe.returncode == 0 or any(m in describe.stderr for m in _NO_TAG)
     # A repo whose branch or status probe failed is a transient state (e.g. index.lock):
     # report what we have, but never pin dirty=False for the process lifetime.
-    return info, branch.returncode == 0 and status.returncode == 0
+    return info, branch.returncode == 0 and status.returncode == 0 and described
 
 
 def _git_info(project_dir: str | None = None) -> dict:
@@ -126,6 +137,7 @@ def make_version_response(
         hash=git["hash"],
         branch=git["branch"],
         dirty=git["dirty"],
+        describe=git.get("describe", ""),
         built=_start_iso,  # For Python, built ≈ started (no compilation)
         started=_start_iso,
         uptime=int(time.time() - _start_time),

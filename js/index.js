@@ -61,10 +61,39 @@ function parseHex(s) {
  * Build a version response object conforming to the realm-sigil contract.
  * For static/build-time use. Server handlers add runtime fields automatically.
  */
+// git describe --tags --match 'v[0-9]*.[0-9]*.[0-9]*' --long, as passed to parseDescribe (issue #3).
+// JS RegExp without the m flag anchors $ at the true end of input (no final-newline allowance, unlike Python's $),
+// so these agree with Python's fullmatch and Go's regexp; the vectors hold \n, \r and U+2028 in every piece.
+const DESCRIBE_ARGS = ['describe', '--tags', '--match', 'v[0-9]*.[0-9]*.[0-9]*', '--long'];
+const PRE_ID = '(0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*)'; // semver 2.0: no leading zero in a numeric id
+const SEMVER_TAG = new RegExp(`^v(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(-${PRE_ID}(\\.${PRE_ID})*)?$`);
+const DISTANCE = /^[0-9]+$/;
+const GHASH = /^g([0-9a-f]{4,64})$/; // 64: a SHA-256 repository's full hash
+
+/**
+ * [semver, build] from `git describe --tags --match 'v[0-9]*.[0-9]*.[0-9]*' --long` output (issue #3). Split at the LAST
+ * two '-' (distance and g<hex> never contain one); the tag must be v<MAJOR>.<MINOR>.<PATCH>[-<prerelease>]
+ * per semver 2.0 (no leading zeros, no '+'); anything else is ['', '']. build = semver when distance is 0 and the tree is
+ * clean, else <semver>+<hex>[.dirty] (semver build metadata, not describe's prerelease-shaped form).
+ * Same contract as Python's parse_describe and Go's ParseDescribe; tools/describe-vectors.json is the truth.
+ */
+function parseDescribe(describe, dirty = false) {
+  if (typeof describe !== 'string') return ['', ''];
+  const b = describe.lastIndexOf('-');
+  const a = b > 0 ? describe.lastIndexOf('-', b - 1) : -1;
+  if (a < 0) return ['', ''];
+  const tag = describe.slice(0, a);
+  const distance = describe.slice(a + 1, b);
+  const m = GHASH.exec(describe.slice(b + 1));
+  if (!m || !SEMVER_TAG.test(tag) || !DISTANCE.test(distance)) return ['', ''];
+  if (/^0+$/.test(distance) && !dirty) return [tag, tag];
+  return [tag, `${tag}+${m[1]}` + (dirty ? '.dirty' : '')];
+}
+
 function versionObject(opts) {
   const {
     name, description, realm, repo,
-    hash = 'dev', branch = 'unknown', dirty = false, built = 'unknown',
+    hash = 'dev', branch = 'unknown', dirty = false, built = 'unknown', describe = '',
     started, uptime, runtime, os, host, pid,
   } = opts;
 
@@ -82,6 +111,8 @@ function versionObject(opts) {
     repo,
     commit_url: commitUrl,
   };
+  // Always present, '' when the project has no version tag (issue #3); see parseDescribe.
+  [obj.semver, obj.build] = parseDescribe(describe, dirty);
 
   // Optional server-only fields
   if (started !== undefined) obj.started = started;
@@ -94,4 +125,4 @@ function versionObject(opts) {
   return obj;
 }
 
-module.exports = { generateName, versionObject, REALMS };
+module.exports = { generateName, versionObject, parseDescribe, DESCRIBE_ARGS, REALMS };

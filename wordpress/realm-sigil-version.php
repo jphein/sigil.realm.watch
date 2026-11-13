@@ -50,6 +50,8 @@ function realm_sigil_version_response() {
         'pid'         => getmypid(),
         'repo'        => $repo,
         'commit_url'  => $commit_url,
+        'semver'      => '',  // the contract's semver/build (issue #3): a WordPress install has no git tag to read
+        'build'       => '',
         'wp_version'  => $wp_version,
         'theme'       => $theme->get('Name') . ' ' . $theme->get('Version'),
     ];

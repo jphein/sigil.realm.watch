@@ -30,6 +30,8 @@ def _ok_run(status_rc=0, status_out=""):
     def run(cmd, **kw):
         if cmd[1] == "status":
             return subprocess.CompletedProcess(cmd, status_rc, stdout=status_out, stderr="")
+        if cmd[1] == "describe":  # no version tag: git exits 128 (issue #3)
+            return subprocess.CompletedProcess(cmd, 128, stdout="", stderr="fatal: No names found")
         out = {"--short": "abc1234\n", "--abbrev-ref": "main\n"}[cmd[2]]
         return subprocess.CompletedProcess(cmd, 0, stdout=out, stderr="")
     return run
@@ -101,13 +103,18 @@ class GitInfoTests(unittest.TestCase):
                 t.start()
             for t in threads:
                 t.join()
-        self.assertEqual(len(calls), 3)  # one probe set, not eight
+        self.assertEqual(len(calls), 4)  # one probe set (rev-parse x2, status, describe), not eight
+
+    def test_a_tag_is_reported(self):
+        _git(self.repo, "tag", "v2.1.0")
+        info = handler._git_info(self.repo)
+        self.assertTrue(info["describe"].startswith("v2.1.0-0-g"), info)
 
     def test_not_a_repo_gives_unknowns(self):
         plain = tempfile.mkdtemp(prefix="sigil-plain-")
         self.addCleanup(shutil.rmtree, plain, True)
         info = handler._git_info(plain)
-        self.assertEqual(info, {"hash": "dev", "branch": "unknown", "dirty": False})
+        self.assertEqual(info, {"hash": "dev", "branch": "unknown", "dirty": False, "describe": ""})
 
 
 class GitInfoFailureTests(unittest.TestCase):
@@ -135,7 +142,7 @@ class GitInfoFailureTests(unittest.TestCase):
         with mock.patch.object(handler.time, "monotonic", side_effect=lambda: clock[0]):
             with mock.patch.object(handler.subprocess, "run", side_effect=hang) as run:
                 info = handler._git_info("/nonexistent-sigil-test")
-                self.assertEqual(info, {"hash": "dev", "branch": "unknown", "dirty": False})
+                self.assertEqual(info, {"hash": "dev", "branch": "unknown", "dirty": False, "describe": ""})
                 # Inside the cooldown a hanging git is not asked again.
                 handler._git_info("/nonexistent-sigil-test")
                 self.assertEqual(run.call_count, 1)
@@ -155,6 +162,39 @@ class GitInfoFailureTests(unittest.TestCase):
             clock[0] += handler.GIT_RETRY_AFTER + 1
             with mock.patch.object(handler.subprocess, "run", side_effect=_ok_run(status_out=" M a\n")):
                 self.assertTrue(handler._git_info("/nonexistent-sigil-test")["dirty"])
+
+    def _describe_run(self, rc, stderr):
+        ok = _ok_run()
+
+        def run(cmd, **kw):
+            if cmd[1] == "describe":
+                return subprocess.CompletedProcess(cmd, rc, stdout="", stderr=stderr)
+            return ok(cmd, **kw)
+        return run
+
+    def test_no_tag_is_a_complete_answer(self):
+        for msg in ("fatal: No names found, cannot describe anything.", "fatal: No tags can describe 'abc'.\n"):
+            handler._reset_git_cache()
+            with mock.patch.object(handler.subprocess, "run", side_effect=self._describe_run(128, msg)):
+                handler._git_info("/nonexistent-sigil-test")
+            entry = handler._git_cache[os.path.abspath("/nonexistent-sigil-test")]
+            self.assertIsNone(entry[1], "a repo with no tag was not cached as complete")
+
+    def test_a_describe_failure_is_retried_not_pinned(self):
+        clock = [1000.0]
+        with mock.patch.object(handler.time, "monotonic", side_effect=lambda: clock[0]):
+            with mock.patch.object(handler.subprocess, "run",
+                                   side_effect=self._describe_run(128, "fatal: unable to read refs")):
+                self.assertEqual(handler._git_info("/nonexistent-sigil-test")["describe"], "")
+            ok = _ok_run()
+
+            def tagged(cmd, **kw):
+                if cmd[1] == "describe":
+                    return subprocess.CompletedProcess(cmd, 0, stdout="v1.0.0-0-gabc1234\n", stderr="")
+                return ok(cmd, **kw)
+            with mock.patch.object(handler.subprocess, "run", side_effect=tagged):
+                clock[0] += handler.GIT_RETRY_AFTER + 1
+                self.assertEqual(handler._git_info("/nonexistent-sigil-test")["describe"], "v1.0.0-0-gabc1234")
 
     def test_head_failure_is_retried_not_pinned(self):
         # HEAD failing is usually "no .git" (an rsync deploy) but can be transient: within the
@@ -216,7 +256,7 @@ class GitInfoFailureTests(unittest.TestCase):
     def test_missing_git_binary_degrades(self):
         with mock.patch.object(handler.subprocess, "run", side_effect=FileNotFoundError("git")):
             info = handler._git_info("/nonexistent-sigil-test")
-        self.assertEqual(info, {"hash": "dev", "branch": "unknown", "dirty": False})
+        self.assertEqual(info, {"hash": "dev", "branch": "unknown", "dirty": False, "describe": ""})
 
 
 if __name__ == "__main__":

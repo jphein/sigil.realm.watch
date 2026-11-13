@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"strings"
 	"testing"
 )
 
@@ -108,4 +110,55 @@ func containsStr(s, sub string) bool {
 		}
 	}
 	return false
+}
+
+// TestParseDescribe_Vectors holds Go to the shared semver/build contract (issue #3); python and js are held to the
+// same file by python/tests/test_describe.py.
+func TestParseDescribe_Vectors(t *testing.T) {
+	raw, err := os.ReadFile("../tools/describe-vectors.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var doc struct {
+		Cases []struct {
+			Describe string `json:"describe"`
+			Dirty    bool   `json:"dirty"`
+			Semver   string `json:"semver"`
+			Build    string `json:"build"`
+		} `json:"cases"`
+	}
+	if err := json.Unmarshal(raw, &doc); err != nil {
+		t.Fatal(err)
+	}
+	if len(doc.Cases) < 30 {
+		t.Fatalf("only %d vectors: the file did not load as expected", len(doc.Cases))
+	}
+	for _, c := range doc.Cases {
+		s, b := ParseDescribe(c.Describe, c.Dirty)
+		if s != c.Semver || b != c.Build {
+			t.Errorf("ParseDescribe(%q, %v) = (%q, %q), want (%q, %q)", c.Describe, c.Dirty, s, b, c.Semver, c.Build)
+		}
+	}
+}
+
+func TestNewVersion_SemverAndBuild(t *testing.T) {
+	oldD, oldDirty := Describe, Dirty
+	defer func() { Describe, Dirty = oldD, oldDirty }()
+
+	Describe, Dirty = "v1.4.0-2-gabc1234", "false"
+	v := NewVersion("svc", "d", "fantasy", "")
+	if v.Semver != "v1.4.0" || v.Build != "v1.4.0+abc1234" || Semver() != "v1.4.0" || Build() != "v1.4.0+abc1234" {
+		t.Errorf("tagged: semver=%q build=%q Semver()=%q Build()=%q", v.Semver, v.Build, Semver(), Build())
+	}
+	out, _ := json.Marshal(v)
+	if !strings.Contains(string(out), `"semver":"v1.4.0"`) || !strings.Contains(string(out), `"build":"v1.4.0+abc1234"`) {
+		t.Errorf("json lacks semver/build: %s", out)
+	}
+
+	Describe = "" // no version tag: both fields present and empty
+	v = NewVersion("svc", "d", "fantasy", "")
+	out, _ = json.Marshal(v)
+	if v.Semver != "" || v.Build != "" || !strings.Contains(string(out), `"semver":""`) {
+		t.Errorf("untagged: %s", out)
+	}
 }
