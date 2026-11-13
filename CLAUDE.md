@@ -12,7 +12,7 @@ A shared versioning library that:
 ## Structure
 
 - `words/realms.json` — canonical word lists (single source of truth)
-- `sync-words.sh` — generates `go/realms.go`, `python/realm_sigil/realms.py`, `js/realms.js`
+- `sync-words.sh` — generates `go/realms.go`, `python/realm_sigil/realms.py`, `js/realms.js`, `rust/src/realms.rs`, and the marked corpus block in `wordpress/realm-sigil-version.php` (`--all`, or `--only <langs>`; an unknown target is an error). `tools/audit_corpora.py` checks all five; `python/tests/test_wordpress_parity.py` runs the PHP against python (`SIGIL_PHP="docker run --rm -i php:8.3-cli php"` where php is not installed)
 - `go/` — Go module (`github.com/jphein/sigil.realm.watch/go`)
 - `python/` — Python package
 - `js/` — Node.js/npm package
@@ -22,7 +22,7 @@ A shared versioning library that:
 
 1. Edit `words/realms.json` to add words or realms
 2. Run `./sync-words.sh` to regenerate language-specific files
-3. Never edit `realms.go`, `realms.py`, or `realms.js` directly — they're generated
+3. Never edit `realms.go`, `realms.py`, `realms.js`, `realms.rs` or the PHP corpus block directly — they're generated
 
 ## Adding to a Project
 
