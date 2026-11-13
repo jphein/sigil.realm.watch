@@ -28,6 +28,8 @@ export interface VersionObjectOptions {
   branch?: string;
   dirty?: boolean;
   built?: string;
+  /** Raw `git describe --tags --match 'v[0-9]*.[0-9]*.[0-9]*' --long` output; "" when there is no version tag. */
+  describe?: string;
   started?: string;
   uptime?: number;
   runtime?: string;
@@ -48,6 +50,11 @@ export interface VersionResponse {
   realm: Realm;
   repo?: string | null;
   commit_url: string;
+  /** Nearest version tag, e.g. "v1.2.3"; "" when the project has no version tag. Optional in the type because a
+   *  response from a server on an older realm-sigil has neither field (issue #3). */
+  semver?: string;
+  /** semver when HEAD is exactly on a clean tag, else "<semver>+<hash>[.dirty]"; "" with no tag. */
+  build?: string;
   started?: string;
   uptime?: number;
   runtime?: string;
@@ -61,3 +68,12 @@ export interface VersionResponse {
  * For static/build-time use. Server handlers add runtime fields automatically.
  */
 export function versionObject(opts: VersionObjectOptions): VersionResponse;
+
+/** The git arguments whose output parseDescribe reads. */
+export const DESCRIBE_ARGS: readonly string[];
+
+/**
+ * [semver, build] from `git describe --tags --match 'v[0-9]*' --long` output and the dirty flag.
+ * Unparseable or non-semver input gives ["", ""].
+ */
+export function parseDescribe(describe: string, dirty?: boolean): [semver: string, build: string];

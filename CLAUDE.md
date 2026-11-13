@@ -67,6 +67,27 @@ export default nextHandler('name', 'description', 'realm', 'repo');
 - JS: `node -e "const {generateName} = require('./js'); console.log(generateName('abc1234', 'fantasy'))"`
 - Go: `cd go && go test -v ./...` (requires Go installed)
 
+## Semver beside the sigil name (issue #3)
+
+Every `/api/version` response (go, python, js, static `version.json`; wordpress as `""`) carries two more fields,
+always present:
+
+- `semver` — the nearest version tag, e.g. `v1.2.3` or `v1.2.3-rc.1`; `""` when the project has none.
+- `build` — `semver` when HEAD is exactly on that tag and the tree is clean, otherwise `<semver>+<hash>[.dirty]`
+  (e.g. `v1.2.3+abc1234.dirty`); `""` without a tag.
+
+Both come from ONE input, `git describe --tags --match 'v[0-9]*.[0-9]*.[0-9]*' --long` (`<tag>-<distance>-g<hex>`), parsed
+identically by `parse_describe` (python), `parseDescribe` (js) and `ParseDescribe` (go): split at the last two `-`;
+the tag must be `v<MAJOR>.<MINOR>.<PATCH>[-<prerelease>]` per semver 2.0 (no leading zero in any numeric identifier,
+prerelease ones included; no `+`), else both are `""`.
+`build` is semver **build metadata** on purpose: describe's own `v1.2.3-5-gabc` shape parses as a *prerelease* and
+sorts before `v1.2.3`. `tools/describe-vectors.json` is the shared truth (go test + `python/tests/test_describe.py`
+for python and js). Go gets the input from the `Describe` ldflag (see `go/sigil.go`); `.git_info` (deploy-banner.sh)
+carries it as `"describe"` for hosts deployed without `.git` (js asks live git when an older `.git_info` lacks it).
+The glob skips tags that only look like versions (`v9-beta`); a tag that matches it but is not semver (`v1.2.3.4`)
+gives `""` rather than a wrong answer. `dirty` is `git status --porcelain` (staged and untracked count) in every
+emitter: python, js, `.git_info` and `static/build.sh`, which also names builds via `realm_sigil.generate_name` now.
+
 ## Cross-Language Consistency
 
 All bindings (Go, Python, JS, Rust) must produce identical names for the same hash+realm, for ANY input string, not just hex. `python/tests/test_generate_name.py` checks Python against JS. The algorithm:

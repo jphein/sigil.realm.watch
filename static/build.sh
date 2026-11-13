@@ -38,19 +38,22 @@ cd "$DIR"
 # Gather git info
 HASH=$(git rev-parse --short HEAD 2>/dev/null || echo "dev")
 BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
-DIRTY=$(git diff --quiet 2>/dev/null && echo "false" || echo "true")
+# porcelain, like the python and js handlers: staged and untracked changes count (git diff --quiet saw neither)
+if [ -n "$(git status --porcelain --untracked-files=normal 2>/dev/null)" ]; then DIRTY=true; else DIRTY=false; fi
 BUILT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+# Nearest version tag for semver/build (issue #3); "" when the project has none.
+DESCRIBE=$(git describe --tags --match 'v[0-9]*.[0-9]*.[0-9]*' --long 2>/dev/null || true)
 
-# Generate magical name
+# Every value reaches python through the environment, never spliced into its source: a branch, name or description
+# holding a quote used to break (or run as) the python below (xreview 11-13). The name comes from the python
+# binding itself, so static sites follow the same tolerant hex parse as every other binding (issue #9); this script
+# used to carry its own int(hash, 16), which disagreed for "dev" and any non-hex input.
+export SIGIL_PY="$SCRIPT_DIR/../python" SIGIL_REALM="$REALM" SIGIL_HASH="$HASH"
 VERSION_NAME=$(python3 -c "
-import json, sys
-with open('$REALMS_JSON') as f:
-    realms = json.load(f)
-r = realms.get('$REALM', realms['fantasy'])
-seed = int('$HASH', 16) if '$HASH' != 'dev' else 0
-adj = r['adjectives'][seed % len(r['adjectives'])]
-noun = r['nouns'][(seed >> 8) % len(r['nouns'])]
-print(f'{adj} {noun} · $HASH')
+import os, sys
+sys.path.insert(0, os.environ['SIGIL_PY'])
+from realm_sigil import generate_name
+print(generate_name(os.environ['SIGIL_HASH'], os.environ['SIGIL_REALM']))
 ")
 
 COMMIT_URL=""
@@ -74,23 +77,29 @@ echo -e "    ${SPARK}✦${RESET}   ${DIM}── ── ── ── ── ─�
 echo ""
 
 # Write version.json
-python3 -c "
-import json
+SIGIL_NAME="$NAME" SIGIL_DESCRIPTION="$DESCRIPTION" SIGIL_VERSION="$VERSION_NAME" SIGIL_BRANCH="$BRANCH" \
+SIGIL_DIRTY="$DIRTY" SIGIL_BUILT="$BUILT" SIGIL_REPO="$REPO" SIGIL_COMMIT_URL="$COMMIT_URL" \
+SIGIL_DESCRIBE="$DESCRIBE" python3 -c "
+import json, os, sys
+e = os.environ
+sys.path.insert(0, e['SIGIL_PY'])
+from realm_sigil import parse_describe
 data = {
-    'name': '$NAME',
-    'description': '$DESCRIPTION',
-    'version': '''$VERSION_NAME''',
-    'hash': '$HASH',
-    'branch': '$BRANCH',
-    'dirty': $([ "$DIRTY" = "true" ] && echo True || echo False),
-    'built': '$BUILT',
-    'realm': '$REALM',
-    'repo': '$REPO',
-    'commit_url': '$COMMIT_URL',
+    'name': e['SIGIL_NAME'],
+    'description': e['SIGIL_DESCRIPTION'],
+    'version': e['SIGIL_VERSION'],
+    'hash': e['SIGIL_HASH'],
+    'branch': e['SIGIL_BRANCH'],
+    'dirty': e['SIGIL_DIRTY'] == 'true',
+    'built': e['SIGIL_BUILT'],
+    'realm': e['SIGIL_REALM'],
+    'repo': e['SIGIL_REPO'],
+    'commit_url': e['SIGIL_COMMIT_URL'],
 }
+data['semver'], data['build'] = parse_describe(e['SIGIL_DESCRIBE'], data['dirty'])
 with open('version.json', 'w') as f:
     json.dump(data, f, indent=2)
-    f.write('\n')
+    f.write('\\n')
 "
 
 echo -e "  ${DIM}✓ version.json written${RESET}"
@@ -101,8 +110,9 @@ if [[ -n "$HTML" && -f "$HTML" ]]; then
 import json
 with open('version.json') as f:
     d = json.load(f)
-# HTML-safe JSON in single attribute
-print(json.dumps(d))
+# JSON in a single-quoted attribute: & and ' must be entities, or a description like JP's page ends the
+# attribute early (the browser decodes them back, so content= is still the exact JSON)
+print(json.dumps(d).replace('&', '&amp;').replace(\"'\", '&#39;'))
 ")
 
   # Escape for sed

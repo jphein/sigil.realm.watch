@@ -7,6 +7,8 @@ export interface GitInfo {
   hash: string;
   branch: string;
   dirty: boolean;
+  /** `git describe --tags --match 'v[0-9]*.[0-9]*.[0-9]*' --long`, or "" (no version tag, or no git). */
+  describe?: string;
 }
 
 /**

@@ -6,7 +6,7 @@ const { execFileSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
-const { versionObject } = require('./index');
+const { versionObject, DESCRIBE_ARGS } = require('./index');
 
 const startTime = Date.now();
 const startISO = new Date().toISOString();
@@ -28,9 +28,24 @@ function readGitInfoFile(cwd) {
       hash: parsed.hash,
       branch: typeof parsed.branch === 'string' ? parsed.branch : 'unknown',
       dirty: parsed.dirty === true,
+      // undefined (not '') when the file predates "describe" (issue #3), so gitInfo can ask live git instead
+      describe: typeof parsed.describe === 'string' ? parsed.describe : undefined,
     };
   } catch {
     return null;
+  }
+}
+
+// Every git call is synchronous on the request path, so each is time-bounded (as python's GIT_TIMEOUT, issue #12)
+// and never reads stdin; a stale index.lock or a credential prompt must not stall the event loop.
+const GIT_OPTS = { encoding: 'utf8', timeout: 5000, stdio: ['ignore', 'pipe', 'ignore'] };
+
+function liveDescribe(cwd) {
+  try {
+    // no version tag is the normal case (git exits 128): describe stays '' (issue #3)
+    return execFileSync('git', DESCRIBE_ARGS, { ...GIT_OPTS, cwd }).trim();
+  } catch {
+    return '';
   }
 }
 
@@ -39,18 +54,26 @@ function gitInfo(cwd) {
   // deployed hosts where `.git` was excluded from rsync. Symmetric with
   // the shell helper realm_sigil_git_info that wrote it.
   const baked = readGitInfoFile(cwd);
-  if (baked) return baked;
-
-  const info = { hash: 'dev', branch: 'unknown', dirty: false };
-  try {
-    info.hash = execFileSync('git', ['rev-parse', '--short', 'HEAD'], { cwd, encoding: 'utf8' }).trim() || 'dev';
-    info.branch = execFileSync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], { cwd, encoding: 'utf8' }).trim() || 'unknown';
-    try {
-      execFileSync('git', ['diff', '--quiet'], { cwd });
-      info.dirty = false;
-    } catch {
-      info.dirty = true;
+  if (baked) {
+    if (baked.describe === undefined) {
+      // An older .git_info (before issue #3): ask live git, but only trust it for the SAME commit. A file baked at
+      // commit A beside a checkout at B would otherwise pair A's hash with B's semver/build (xreview 11-13).
+      const live = liveDescribe(cwd);
+      const hex = live.slice(live.lastIndexOf('-g') + 2);
+      const same = live !== '' && hex !== '' && (hex.startsWith(baked.hash) || baked.hash.startsWith(hex));
+      baked.describe = same && baked.hash !== 'dev' ? live : '';
     }
+    return baked;
+  }
+
+  const info = { hash: 'dev', branch: 'unknown', dirty: false, describe: '' };
+  try {
+    info.hash = execFileSync('git', ['rev-parse', '--short', 'HEAD'], { ...GIT_OPTS, cwd }).trim() || 'dev';
+    info.branch = execFileSync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], { ...GIT_OPTS, cwd }).trim() || 'unknown';
+    // `status --porcelain` sees staged and untracked changes; `git diff --quiet` saw neither. Same rule as
+    // python's handler, so the two report the same "dirty" and the same build for one tree (xreview 11-13).
+    info.dirty = execFileSync('git', ['status', '--porcelain', '--untracked-files=normal'], { ...GIT_OPTS, cwd }).trim() !== '';
+    info.describe = liveDescribe(cwd);
   } catch {
     // git not available
   }
@@ -81,6 +104,7 @@ function makeVersionResponse(name, description, realm, repo, cwd) {
     hash: git.hash,
     branch: git.branch,
     dirty: git.dirty,
+    describe: git.describe,
     built: startISO,
     started: startISO,
     uptime: Math.floor((Date.now() - startTime) / 1000),

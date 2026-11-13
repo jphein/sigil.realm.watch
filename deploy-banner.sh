@@ -32,14 +32,26 @@ _realm_color() {
 # Generate .git_info JSON for projects that don't have git on the server
 realm_sigil_git_info() {
     local outfile="${1:-.git_info}"
-    local HASH BRANCH DIRTY BUILT
+    local HASH BRANCH DIRTY BUILT DESCRIBE
+    # python3 writes the JSON below; this file's realm_sigil_pre/post already needed it, so it is not new, but a
+    # missing one must fail loudly here rather than leave a deploy with no .git_info at all.
+    command -v python3 >/dev/null 2>&1 || { echo "realm_sigil_git_info: python3 is required to write $outfile" >&2; return 1; }
     HASH=$(git rev-parse --short HEAD 2>/dev/null || echo "dev")
     BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
-    DIRTY=$(git diff --quiet 2>/dev/null && echo "false" || echo "true")
+    # porcelain, like the python and js handlers: staged and untracked changes count (git diff --quiet saw neither)
+    if [ -n "$(git status --porcelain --untracked-files=normal 2>/dev/null)" ]; then DIRTY=true; else DIRTY=false; fi
     BUILT=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-    cat > "$outfile" << EOF
-{"hash":"$HASH","branch":"$BRANCH","dirty":$DIRTY,"built":"$BUILT"}
-EOF
+    # Nearest version tag, for the semver/build fields (issue #3); "" without one.
+    DESCRIBE=$(git describe --tags --match 'v[0-9]*.[0-9]*.[0-9]*' --long 2>/dev/null || true)
+    # Written by a JSON encoder, from the environment: a branch or tag may legally contain a double quote
+    # (feature"x), which broke the old hand-written heredoc JSON for every reader (xreview 11-13).
+    H="$HASH" B="$BRANCH" D="$DIRTY" T="$BUILT" X="$DESCRIBE" python3 -c '
+import json, os, sys
+e = os.environ
+with open(sys.argv[1], "w") as f:
+    json.dump({"hash": e["H"], "branch": e["B"], "dirty": e["D"] == "true", "built": e["T"], "describe": e["X"]}, f)
+    f.write("\n")
+' "$outfile"
 }
 
 # Pre-deploy banner: bold gold sigil name from local git state

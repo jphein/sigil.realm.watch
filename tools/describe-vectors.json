@@ -1,0 +1,347 @@
+{
+ "_comment": "semver/build from `git describe --tags --match 'v[0-9]*.[0-9]*.[0-9]*' --long` + dirty (issue #3). Every binding (go, python, js) must map each describe+dirty to exactly this semver+build: go/sigil_test.go, python/tests/test_describe.py (python and js). Rule: split at the LAST two '-' into tag, distance, g<hex>; tag must be v<MAJOR>.<MINOR>.<PATCH>[-<prerelease>] per semver 2.0 (no leading zero in any numeric identifier, prerelease ones included) with no '+'; anything else is \"\",\"\". build = semver when distance is 0 and the tree is clean, else semver+<hex>[.dirty], which is semver BUILD METADATA (git describe's own v1.2.3-5-gabc form would parse as a PRERELEASE and sort before v1.2.3).",
+ "cases": [
+  {
+   "describe": "v1.2.3-0-gabc1234",
+   "dirty": false,
+   "semver": "v1.2.3",
+   "build": "v1.2.3"
+  },
+  {
+   "describe": "v1.2.3-0-gabc1234",
+   "dirty": true,
+   "semver": "v1.2.3",
+   "build": "v1.2.3+abc1234.dirty"
+  },
+  {
+   "describe": "v1.2.3-5-gabc1234",
+   "dirty": false,
+   "semver": "v1.2.3",
+   "build": "v1.2.3+abc1234"
+  },
+  {
+   "describe": "v1.2.3-5-gabc1234",
+   "dirty": true,
+   "semver": "v1.2.3",
+   "build": "v1.2.3+abc1234.dirty"
+  },
+  {
+   "describe": "v0.0.0-1-g0000",
+   "dirty": false,
+   "semver": "v0.0.0",
+   "build": "v0.0.0+0000"
+  },
+  {
+   "describe": "v10.20.30-12-g0123456789abcdef0123456789abcdef01234567",
+   "dirty": false,
+   "semver": "v10.20.30",
+   "build": "v10.20.30+0123456789abcdef0123456789abcdef01234567"
+  },
+  {
+   "describe": "v1.2.3-rc.1-0-gabc1234",
+   "dirty": false,
+   "semver": "v1.2.3-rc.1",
+   "build": "v1.2.3-rc.1"
+  },
+  {
+   "describe": "v1.2.3-rc.1-3-gabc1234",
+   "dirty": false,
+   "semver": "v1.2.3-rc.1",
+   "build": "v1.2.3-rc.1+abc1234"
+  },
+  {
+   "describe": "v2.0.0-alpha-beta-7-gdeadbee",
+   "dirty": true,
+   "semver": "v2.0.0-alpha-beta",
+   "build": "v2.0.0-alpha-beta+deadbee.dirty"
+  },
+  {
+   "describe": "v1.2.3-5-g0-3-gabc1234",
+   "dirty": false,
+   "semver": "v1.2.3-5-g0",
+   "build": "v1.2.3-5-g0+abc1234"
+  },
+  {
+   "describe": "",
+   "dirty": false,
+   "semver": "",
+   "build": ""
+  },
+  {
+   "describe": "",
+   "dirty": true,
+   "semver": "",
+   "build": ""
+  },
+  {
+   "describe": "abc1234",
+   "dirty": false,
+   "semver": "",
+   "build": ""
+  },
+  {
+   "describe": "v1.2.3",
+   "dirty": false,
+   "semver": "",
+   "build": ""
+  },
+  {
+   "describe": "v1.2-0-gabc1234",
+   "dirty": false,
+   "semver": "",
+   "build": ""
+  },
+  {
+   "describe": "v1.2.3.4-0-gabc1234",
+   "dirty": false,
+   "semver": "",
+   "build": ""
+  },
+  {
+   "describe": "1.2.3-0-gabc1234",
+   "dirty": false,
+   "semver": "",
+   "build": ""
+  },
+  {
+   "describe": "V1.2.3-0-gabc1234",
+   "dirty": false,
+   "semver": "",
+   "build": ""
+  },
+  {
+   "describe": "v01.2.3-0-gabc1234",
+   "dirty": false,
+   "semver": "",
+   "build": ""
+  },
+  {
+   "describe": "v1.2.3+meta-0-gabc1234",
+   "dirty": false,
+   "semver": "",
+   "build": ""
+  },
+  {
+   "describe": "v1.2.3--0-gabc1234",
+   "dirty": false,
+   "semver": "",
+   "build": ""
+  },
+  {
+   "describe": "v1.2.3-rc..1-0-gabc1234",
+   "dirty": false,
+   "semver": "",
+   "build": ""
+  },
+  {
+   "describe": "v1.2.3-x-gabc1234",
+   "dirty": false,
+   "semver": "",
+   "build": ""
+  },
+  {
+   "describe": "v1.2.3--1-gabc1234",
+   "dirty": false,
+   "semver": "",
+   "build": ""
+  },
+  {
+   "describe": "v1.2.3-0-abc1234",
+   "dirty": false,
+   "semver": "",
+   "build": ""
+  },
+  {
+   "describe": "v1.2.3-0-gABC1234",
+   "dirty": false,
+   "semver": "",
+   "build": ""
+  },
+  {
+   "describe": "v1.2.3-0-gabc",
+   "dirty": false,
+   "semver": "",
+   "build": ""
+  },
+  {
+   "describe": "v1.2.3-0-g",
+   "dirty": false,
+   "semver": "",
+   "build": ""
+  },
+  {
+   "describe": "v1.2.3-0-gabc1234\n",
+   "dirty": false,
+   "semver": "",
+   "build": ""
+  },
+  {
+   "describe": " v1.2.3-0-gabc1234",
+   "dirty": false,
+   "semver": "",
+   "build": ""
+  },
+  {
+   "describe": "v1.2.3-0-gabc1234-dirty",
+   "dirty": false,
+   "semver": "",
+   "build": ""
+  },
+  {
+   "describe": "v１.2.3-0-gabc1234",
+   "dirty": false,
+   "semver": "",
+   "build": ""
+  },
+  {
+   "describe": "v1.2.3-٣-gabc1234",
+   "dirty": false,
+   "semver": "",
+   "build": ""
+  },
+  {
+   "describe": "v1.2.3-0-gabc1234ß",
+   "dirty": false,
+   "semver": "",
+   "build": ""
+  },
+  {
+   "describe": "v1.2.3-99999999999999999999-gabc1234",
+   "dirty": false,
+   "semver": "v1.2.3",
+   "build": "v1.2.3+abc1234"
+  },
+  {
+   "describe": "v1.2.3-01-0-gabc1234",
+   "dirty": false,
+   "semver": "",
+   "build": ""
+  },
+  {
+   "describe": "v1.2.3-rc.01-0-gabc1234",
+   "dirty": false,
+   "semver": "",
+   "build": ""
+  },
+  {
+   "describe": "v1.2.3-0-0-gabc1234",
+   "dirty": false,
+   "semver": "v1.2.3-0",
+   "build": "v1.2.3-0"
+  },
+  {
+   "describe": "v1.2.3-0a-0-gabc1234",
+   "dirty": false,
+   "semver": "v1.2.3-0a",
+   "build": "v1.2.3-0a"
+  },
+  {
+   "describe": "v1.2.3-rc.10-0-gabc1234",
+   "dirty": false,
+   "semver": "v1.2.3-rc.10",
+   "build": "v1.2.3-rc.10"
+  },
+  {
+   "describe": "v1.2.3-x.7.z.92-1-gabc1234",
+   "dirty": false,
+   "semver": "v1.2.3-x.7.z.92",
+   "build": "v1.2.3-x.7.z.92+abc1234"
+  },
+  {
+   "describe": "v1.2.3-00-0-gabc1234",
+   "dirty": false,
+   "semver": "",
+   "build": ""
+  },
+  {
+   "describe": "v1.2.3-00-gabc1234",
+   "dirty": false,
+   "semver": "v1.2.3",
+   "build": "v1.2.3"
+  },
+  {
+   "describe": "v1.2.3-0-g0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+   "dirty": true,
+   "semver": "v1.2.3",
+   "build": "v1.2.3+0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef.dirty"
+  },
+  {
+   "describe": "v1.2.3-0-g0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0",
+   "dirty": false,
+   "semver": "",
+   "build": ""
+  },
+  {
+   "describe": "v1.2.3\n-0-gabc1234",
+   "dirty": false,
+   "semver": "",
+   "build": ""
+  },
+  {
+   "describe": "v1.2.3-0\n-gabc1234",
+   "dirty": false,
+   "semver": "",
+   "build": ""
+  },
+  {
+   "describe": "v1.2.3-0-gabc1234\r",
+   "dirty": false,
+   "semver": "",
+   "build": ""
+  },
+  {
+   "describe": "v1.2.3-0-gabc1234 ",
+   "dirty": false,
+   "semver": "",
+   "build": ""
+  },
+  {
+   "describe": "v1.2.3\r-0-gabc1234",
+   "dirty": false,
+   "semver": "",
+   "build": ""
+  },
+  {
+   "describe": "v1.2.3-0 -gabc1234",
+   "dirty": false,
+   "semver": "",
+   "build": ""
+  },
+  {
+   "describe": "v1.2.3-\n0-gabc1234",
+   "dirty": false,
+   "semver": "",
+   "build": ""
+  },
+  {
+   "describe": "\nv1.2.3-0-gabc1234",
+   "dirty": false,
+   "semver": "",
+   "build": ""
+  },
+  {
+   "describe": "v9.9.9\"x-0-gabc1234",
+   "dirty": false,
+   "semver": "",
+   "build": ""
+  },
+  {
+   "describe": "v9-0-gabc1234",
+   "dirty": false,
+   "semver": "",
+   "build": ""
+  },
+  {
+   "describe": "v1.2.3---0-gabc1234",
+   "dirty": false,
+   "semver": "v1.2.3--",
+   "build": "v1.2.3--"
+  },
+  {
+   "describe": "v1.2.3---1-gabc1234",
+   "dirty": false,
+   "semver": "v1.2.3--",
+   "build": "v1.2.3--+abc1234"
+  }
+ ]
+}
