@@ -40,9 +40,9 @@ function generateName(hash, realm = 'fantasy') {
  * bits, so a hash longer than 8 hex chars would diverge from Go's uint64. `BigInt.asUintN(64,…)`
  * reproduces Go's overflow semantics precisely.
  *
- * (Note Python's `int(hash, 16)` instead THROWS on a non-hex character — it special-cases only
- * the literal "dev" — so Go/Rust/JS are tolerant here and Python is not. Pre-existing, and out
- * of scope for this fix, but it means "all four agree" holds for hex input, not for garbage.)
+ * Python used to `int(hash, 16)` and THROW on a non-hex character, special-casing only "dev"
+ * (to seed 0, not 0xde). Since issue #9 it ports this parser, so all four bindings agree on
+ * every input: "dev" is seed 0xde, "" is seed 0, nothing raises.
  */
 function parseHex(s) {
   let result = 0n;

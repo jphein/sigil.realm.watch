@@ -69,9 +69,10 @@ export default nextHandler('name', 'description', 'realm', 'repo');
 
 ## Cross-Language Consistency
 
-All three implementations must produce identical names for the same hash+realm. The algorithm:
+All bindings (Go, Python, JS, Rust) must produce identical names for the same hash+realm, for ANY input string, not just hex. `python/tests/test_generate_name.py` checks Python against JS. The algorithm:
 ```
-seed = parseInt(hash, 16)
+seed = tolerant hex parse of hash: hex digits accumulate, anything else is skipped, wraps at 64 bits
+       ("dev" → 0xde, "" → 0; never raises — issue #9)
 adjective = realm.adjectives[seed % len(adjectives)]
 noun = realm.nouns[(seed >> 8) % len(nouns)]
 name = "{adjective} {noun} · {hash}"

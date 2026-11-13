@@ -156,19 +156,20 @@ pub const fn name_for_id(id: u8, realm: &Realm) -> (&'static str, &'static str) 
 /// `(adjective, noun)` from a hex string — parity with Go's `GenerateName(hash, realm)`. Non-hex
 /// characters are skipped, matching Go's tolerant `parseHex`.
 ///
-/// ⚠️ **Parity holds over hex input, and NOT over anything else.** Measured 2026-08-14 across all
+/// Parity holds over **every** input since realm-sigil issue #9. Measured 2026-08-14 across all
 /// nine realms × 163 hex inputs (u32 edges, >8-char seeds, lengths 1–16, real build hashes): rust,
-/// go and js are byte-identical on every case. Python agrees there too — but the three tolerant
-/// bindings and Python part company the moment the input is not hex:
+/// go and js were byte-identical on every case, and Python agreed on hex — but Python parsed with
+/// `int(hash, 16)`, so it diverged the moment the input was not hex:
 ///
-/// | input   | rust / go / js        | python                        |
+/// | input   | rust / go / js        | python before #9              |
 /// |---------|-----------------------|-------------------------------|
 /// | `"dev"` | seed 222 (`d`,`e`)    | seed 0 — special-cased literal|
-/// | `""`    | seed 0                | **raises** `ValueError`       |
+/// | `""`    | seed 0                | **raised** `ValueError`       |
 ///
-/// So an unstamped build named through this crate and through `realm_sigil.generate_name` gets two
-/// different names. Consumers should publish no sigil at all for an unstamped build rather than
-/// pick one (hearthd does exactly that); see realm-sigil issue #9.
+/// Python now ports this parser (`realm_sigil._parse_hex`) and its test suite checks it against
+/// the JS binding over that domain plus non-hex sentinels. `"dev"` and `""` deliberately do not
+/// collide. Consumers should still publish no sigil at all for an unstamped build (hearthd does
+/// exactly that): a name that identifies nothing is worse than no name.
 ///
 /// This doc previously read *"`\"dev\"` therefore yields seed 0, as it does in Python"* — which was
 /// wrong about this crate in the same breath as it was right about Python, while the test three
