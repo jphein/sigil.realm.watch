@@ -16,6 +16,11 @@
 #   ./sync-words.sh --only go,python   # a chosen subset
 #   ./sync-words.sh --all              # everything (go, python, js, rust, wordpress)
 #
+# After writing, EVERY binding is compared with words/realms.json (tools/audit_corpora.py --require-current), and a
+# binding left behind fails the run with exit 3 (issue #10). A partial sync is how bindings drift: `--only go` after a
+# word edit leaves rust's corpus, and its divergence #[cfg] markers, saying what they said before, and a stale marker
+# reads exactly like a verified-clean one. To leave bindings behind on purpose, say so: `--allow-behind`.
+#
 # `--all` is spelled out rather than assumed precisely because it is the dangerous one.
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -23,6 +28,7 @@ cd "$(dirname "$0")"
 REALMS=words/realms.json
 RESERVED=words/reserved.json
 WANT=""
+ALLOW_BEHIND=0
 
 usage() {
   cat <<'EOF'
@@ -30,6 +36,9 @@ usage: sync-words.sh (--all | --only <langs>)
 
   --all           regenerate every binding (go, python, js, rust, wordpress)
   --only <langs>  comma-separated subset: go, python, js, rust, wordpress
+  --allow-behind  a deliberate partial sync: report bindings still behind words/realms.json, exit 0
+
+Afterwards every binding is checked against words/realms.json; one left behind is exit 3 unless --allow-behind.
 
 Reads words/realms.json (and words/reserved.json for rust). BOTH are themselves generated from
 lexicon.realm.watch by its sync-vocabularies.sh — edit the vocabularies there, not here.
@@ -40,6 +49,7 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --all)  WANT="go,python,js,rust,wordpress"; shift ;;
     --only) WANT="${2:-}"; shift 2 ;;
+    --allow-behind) ALLOW_BEHIND=1; shift ;;
     -h|--help) usage; exit 0 ;;
     *) echo "unknown argument: $1" >&2; usage >&2; exit 2 ;;
   esac
@@ -414,6 +424,22 @@ with open(PHP, 'w') as f:
     f.write(out)
 print(f'  ✓ {PHP} ({len(data)} realms)')
 PYEOF
+fi
+
+# --- Every binding, not just the ones written: is it current with words/realms.json? (issue #10) ---
+# One comparison, shared with CI's corpus gate, rather than a second one here that could disagree with it.
+if ! behind=$(python3 tools/audit_corpora.py --require-current 2>&1 >/dev/null); then
+  echo "$behind" >&2
+  if [[ "$ALLOW_BEHIND" == 1 ]]; then
+    echo "warning: bindings above are behind words/realms.json (--allow-behind: a deliberate partial sync)." >&2
+  else
+    echo "error: this run left bindings behind words/realms.json. Their words, and rust's divergence markers," >&2
+    echo "       still say what they said before your edit. Regenerate them (--only <those> or --all), or pass" >&2
+    echo "       --allow-behind if this partial sync is deliberate. The files above were written." >&2
+    exit 3
+  fi
+else
+  echo "  ✓ every binding current with $REALMS"
 fi
 
 echo "Done."

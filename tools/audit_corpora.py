@@ -32,6 +32,8 @@ Usage:
     python3 tools/audit_corpora.py              # gate: compare against the baseline
     python3 tools/audit_corpora.py --report     # human-readable state, always exits 0
     python3 tools/audit_corpora.py --write-baseline
+    python3 tools/audit_corpora.py --require-current   # every binding ok vs words/realms.json, baseline ignored
+                                                        # (sync-words.sh runs this after every generation, #10)
 """
 from __future__ import annotations
 
@@ -111,13 +113,41 @@ def summarise(state: dict) -> str:
     return "\n".join(out)
 
 
+def require_current(state: dict) -> int:
+    """Every binding matches words/realms.json right now, or name the ones that do not (issue #10).
+
+    The baseline answers "did anything CHANGE?" for CI. This answers "is everything CURRENT?", which is the question
+    after a generator run: a partial `sync-words.sh --only go` leaves the other bindings, and rust's divergence
+    `#[cfg]` markers, saying what they said before the edit. A stale marker and a verified-clean one look identical,
+    so the generator asks this instead of trusting that nobody needed to look."""
+    behind = {}
+    for binding, realms in sorted(state.items()):
+        if realms.get("__file__") == "missing":
+            behind[binding] = ["(file missing)"]
+            continue
+        bad = sorted(f"{r}={v}" for r, v in realms.items() if v != "ok")
+        if bad:
+            behind[binding] = bad
+    if not behind:
+        print(f"all {len(state)} bindings current with words/realms.json")
+        return 0
+    for binding, bad in behind.items():
+        print(f"BEHIND  {binding:10s} {', '.join(bad)}", file=sys.stderr)
+    print(f"behind: {','.join(behind)}", file=sys.stderr)
+    return 1
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--report", action="store_true", help="print state, always exit 0")
     ap.add_argument("--write-baseline", action="store_true", help="record the current state")
+    ap.add_argument("--require-current", action="store_true",
+                    help="exit 1 unless every binding is ok for every realm (ignores the baseline)")
     args = ap.parse_args()
 
     state = audit()
+    if args.require_current:
+        return require_current(state)
     reference = json.loads(REFERENCE.read_text(encoding="utf-8"))
     print(f"reference: words/realms.json ({len(reference)} realms: {', '.join(sorted(reference))})")
     print(summarise(state))
