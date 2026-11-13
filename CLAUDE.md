@@ -12,7 +12,7 @@ A shared versioning library that:
 ## Structure
 
 - `words/realms.json` — canonical word lists (single source of truth)
-- `sync-words.sh` — generates `go/realms.go`, `python/realm_sigil/realms.py`, `js/realms.js`, `rust/src/realms.rs`, and the marked corpus block in `wordpress/realm-sigil-version.php` (`--all`, or `--only <langs>`; an unknown target is an error). `tools/audit_corpora.py` checks all five; `python/tests/test_wordpress_parity.py` runs the PHP against python (`SIGIL_PHP="docker run --rm -i php:8.3-cli php"` where php is not installed)
+- `sync-words.sh` — generates `go/realms.go`, `python/realm_sigil/realms.py`, `js/realms.js`, `rust/src/realms.rs`, and the marked corpus block in `wordpress/realm-sigil-version.php` (`--all`, or `--only <langs>`; an unknown target is an error). Every run then checks ALL five against `words/realms.json` (`tools/audit_corpora.py --require-current`) and exits 3 if one is behind, because a partial sync leaves rust's divergence markers stale; `--allow-behind` makes a deliberate partial sync explicit (#10). `tools/audit_corpora.py` checks all five; `python/tests/test_wordpress_parity.py` runs the PHP against python (`SIGIL_PHP="docker run --rm -i php:8.3-cli php"` where php is not installed)
 - `go/` — Go module (`github.com/jphein/sigil.realm.watch/go`)
 - `python/` — Python package
 - `js/` — Node.js/npm package
