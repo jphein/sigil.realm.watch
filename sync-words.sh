@@ -14,7 +14,7 @@
 #
 #   ./sync-words.sh --only rust        # one binding (safe — nothing downstream is pinned to it yet)
 #   ./sync-words.sh --only go,python   # a chosen subset
-#   ./sync-words.sh --all              # everything, INCLUDING the three-month catch-up
+#   ./sync-words.sh --all              # everything (go, python, js, rust, wordpress)
 #
 # `--all` is spelled out rather than assumed precisely because it is the dangerous one.
 set -euo pipefail
@@ -28,8 +28,8 @@ usage() {
   cat <<'EOF'
 usage: sync-words.sh (--all | --only <langs>)
 
-  --all           regenerate every binding (go, python, js, rust)
-  --only <langs>  comma-separated subset: go, python, js, rust
+  --all           regenerate every binding (go, python, js, rust, wordpress)
+  --only <langs>  comma-separated subset: go, python, js, rust, wordpress
 
 Reads words/realms.json (and words/reserved.json for rust). BOTH are themselves generated from
 lexicon.realm.watch by its sync-vocabularies.sh — edit the vocabularies there, not here.
@@ -38,7 +38,7 @@ EOF
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --all)  WANT="go,python,js,rust"; shift ;;
+    --all)  WANT="go,python,js,rust,wordpress"; shift ;;
     --only) WANT="${2:-}"; shift 2 ;;
     -h|--help) usage; exit 0 ;;
     *) echo "unknown argument: $1" >&2; usage >&2; exit 2 ;;
@@ -54,6 +54,15 @@ if [[ -z "$WANT" ]]; then
 fi
 
 want() { [[ ",$WANT," == *",$1,"* ]]; }
+
+# An unknown target used to be ignored silently, so `--only wordpres` printed "Done." having written nothing.
+IFS=',' read -r -a _targets <<< "$WANT"
+for _t in "${_targets[@]}"; do
+  case "$_t" in
+    go|python|js|rust|wordpress) ;;
+    *) echo "error: unknown target '$_t' (known: go, python, js, rust, wordpress)" >&2; exit 2 ;;
+  esac
+done
 
 echo "Syncing word lists from $REALMS (targets: $WANT)..."
 
@@ -364,6 +373,46 @@ R.append('')
 with open('rust/src/reserved.rs', 'w') as f:
     f.write('\n'.join(R))
 print(f'  ✓ rust/src/reserved.rs ({len(res)} words)')
+PYEOF
+fi
+
+# --- WordPress: the corpus block inside wordpress/realm-sigil-version.php ---
+# The PHP file is a hand-written mu-plugin (the REST route, the disk field), so only the block between
+# the BEGIN/END markers is generated; everything else is left byte-for-byte. Missing or duplicated
+# markers are a hard error rather than an append, so a reformatted file cannot grow a second corpus.
+# Words go in single-quoted PHP strings (no $-interpolation); anything but letters, digits, '-' and
+# space is refused rather than escaped, because no realm word needs it (issue #11).
+if want wordpress; then
+python3 - "$REALMS" <<'PYEOF'
+import json, re, sys
+
+PHP = 'wordpress/realm-sigil-version.php'
+BEGIN = '    // BEGIN sync-words.sh realms'
+END = '    // END sync-words.sh realms\n'
+with open(sys.argv[1]) as f:
+    data = json.load(f)
+src = open(PHP).read()
+if src.count(BEGIN) != 1 or src.count(END) != 1 or src.index(BEGIN) > src.index(END):
+    sys.exit(f'{PHP}: expected exactly one BEGIN/END sync-words.sh realms marker pair, in order. Refusing to guess.')
+
+def lit(w):
+    if not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9 -]*', w):
+        sys.exit(f'refusing to emit {w!r} into PHP: only letters, digits, "-" and space are allowed')
+    return "'" + w + "'"
+
+L = [BEGIN + ': generated from words/realms.json by ./sync-words.sh --only wordpress. Do not edit.', '    $realms = [']
+for realm, words in data.items():
+    L.append(f"        {lit(realm)} => [")
+    L.append('            [' + ','.join(lit(w) for w in words['adjectives']) + '],')
+    L.append('            [' + ','.join(lit(w) for w in words['nouns']) + '],')
+    L.append('        ],')
+L.append('    ];')
+a = src.index(BEGIN)
+b = src.index(END) + len(END)
+out = src[:a] + '\n'.join(L) + '\n' + END + src[b:]
+with open(PHP, 'w') as f:
+    f.write(out)
+print(f'  ✓ {PHP} ({len(data)} realms)')
 PYEOF
 fi
 

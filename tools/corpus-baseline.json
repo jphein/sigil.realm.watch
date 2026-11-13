@@ -44,14 +44,14 @@
     "void": "ok"
   },
   "wordpress": {
-    "creature": "absent",
-    "fantasy": "drift",
-    "fleet": "drift",
-    "forge": "absent",
-    "oracle": "absent",
-    "signal": "drift",
-    "stellar": "absent",
-    "tarot": "absent",
-    "void": "absent"
+    "creature": "ok",
+    "fantasy": "ok",
+    "fleet": "ok",
+    "forge": "ok",
+    "oracle": "ok",
+    "signal": "ok",
+    "stellar": "ok",
+    "tarot": "ok",
+    "void": "ok"
   }
 }

@@ -85,36 +85,46 @@ function realm_sigil_version_response() {
 }
 
 function realm_sigil_generate_name($hash, $realm) {
+    // BEGIN sync-words.sh realms: generated from words/realms.json by ./sync-words.sh --only wordpress. Do not edit.
     $realms = [
+        'creature' => [
+            ['Amber','Bashful','Chittering','Curious','Dappled','Downy','Drowsy','Feathered','Furred','Gentle','Glimmering','Hungry','Inquisitive','Lively','Mossy','Nimble','Plucky','Quick','Restless','Scruffy','Skittish','Speckled','Tufted','Whiskered'],
+            ['Sprite','Wisp','Moth','Finch','Wren','Newt','Vole','Hare','Fawn','Cub','Kit','Imp','Pika','Shrew','Marten','Otter','Gecko','Skink','Drake','Wyrmling','Pixie','Brownie','Kelpie','Faun'],
+        ],
         'fantasy' => [
-            ['Arcane','Blazing','Celestial','Draconic','Eldritch','Fabled','Gilded','Hallowed','Infernal','Jade','Kindled','Luminous','Mythic','Noble','Obsidian','Primal','Radiant','Spectral','Twilight','Valiant'],
-            ['Aegis','Beacon','Crown','Dominion','Ember','Forge','Grimoire','Herald','Insignia','Jewel','Keystone','Lantern','Monolith','Nexus','Oracle','Pinnacle','Quartz','Relic','Sigil','Throne'],
+            ['Ancient','Arcane','Blazing','Brimming','Celestial','Draconic','Eldritch','Fabled','Gilded','Hallowed','Hollow','Infernal','Jade','Kindled','Luminous','Lunar','Mystic','Mythic','Noble','Obsidian','Primal','Radiant','Runic','Somber','Spectral','Twilight','Valiant','Woven'],
+            ['Aegis','Beacon','Crown','Dominion','Echo','Ember','Forge','Grimoire','Herald','Hollow','Insignia','Jewel','Keystone','Lantern','Monolith','Nexus','Oracle','Pinnacle','Pulsar','Quartz','Raven','Relic','Sigil','Throne','Warden'],
         ],
-        'tarot' => [
-            ['Arcane','Blessed','Charmed','Destined','Enchanted','Fateful','Guiding','Hidden','Illumined','Judging','Karmic','Liminal','Moonlit','Numbered','Ordained','Portentous','Querent','Reversed','Starlit','Turning'],
-            ['Amulet','Blade','Chalice','Diviner','Emperor','Fool','Guardian','Hermit','Initiate','Justice','Knight','Lovers','Magician','Nomad','Ouroboros','Pentacle','Querent','Rosette','Scepter','Tower'],
-        ],
-        'oracle' => [
-            ['Augured','Beckoning','Clairvoyant','Delphic','Ethereal','Foretold','Glimpsed','Hushed','Intuited','Judicious','Knowing','Lucid','Murmured','Nascent','Omniscient','Prophetic','Quieted','Resonant','Scried','Veiled'],
-            ['Augury','Bones','Cipher','Doctrine','Echo','Foresight','Gaze','Hymn','Insight','Judgment','Kenning','Lens','Mirror','Notion','Omen','Prophecy','Question','Revelation','Sight','Truth'],
-        ],
-        'void' => [
-            ['Abyssal','Boundless','Collapsed','Drifting','Entropic','Fractured','Galactic','Hollow','Infinite','Jagged','Kinetic','Liminal','Muted','Null','Obsidian','Phantom','Quantum','Ruptured','Silent','Twisted'],
-            ['Abyss','Breach','Cascade','Drift','Expanse','Fragment','Glitch','Horizon','Interval','Junction','Knot','Lattice','Membrane','Nexus','Orbit','Paradox','Rift','Shade','Threshold','Vertex'],
+        'fleet' => [
+            ['Ancient','Arcane','Argent','Ashen','Blazing','Brimming','Celestial','Draconic','Eldritch','Fabled','Gilded','Hallowed','Hollow','Infernal','Jade','Kindled','Luminous','Lunar','Mystic','Mythic','Noble','Obsidian','Primal','Radiant','Runic','Seraphic','Somber','Spectral','Twilight','Umbral','Valiant','Woven'],
+            ['Aegis','Bastion','Brazier','Cairn','Chalice','Citadel','Diadem','Dominion','Echo','Ember','Glyph','Grimoire','Insignia','Jewel','Keystone','Lantern','Lodestar','Monolith','Nexus','Obelisk','Orrery','Pinnacle','Pulsar','Quartz','Raven','Relic','Sanctum','Spire','Talisman','Throne','Vigil','Warden'],
         ],
         'forge' => [
-            ['Annealed','Bolted','Carbonized','Dense','Electric','Flux','Galvanized','Hardened','Ignited','Joined','Keen','Laminated','Molten','Nitrided','Oxidized','Pressed','Quenched','Riveted','Sintered','Tempered'],
-            ['Anvil','Bellows','Crucible','Die','Engine','Furnace','Gear','Hammer','Ingot','Jig','Kiln','Lathe','Mandrel','Nozzle','Oven','Piston','Quench','Rivet','Spark','Tongs'],
+            ['Molten','Hammered','Tempered','Forged','Glowing','Smoldering','Sparking','Kilned','Ironclad','Wrought','Bellowed','Anvilled','White-Hot','Smelted'],
+            ['Forge','Anvil','Kiln','Quench','Hammer','Smithy','Smelter','Ironheart','Wright','Crucible','Bellows','Mold','Ingot','Foundry'],
+        ],
+        'oracle' => [
+            ['Augural','Fated','Prescient','Sibylline','Dreaming','Prophetic','Foretold','Whispered','Veiled','Divining','Foreseen','Omened','Occult','Scrying'],
+            ['Oracle','Augur','Sibyl','Prophet','Omen','Vision','Harbinger','Dreamer','Seer','Scrying','Prophecy','Runecast','Soothsayer','Divination'],
         ],
         'signal' => [
-            ['Amplified','Broadcast','Channeled','Decoded','Echoing','Filtered','Grounded','Harmonic','Isolated','Jittered','Keyed','Latched','Modulated','Narrowed','Oscillating','Pulsed','Quantized','Relayed','Synced','Tuned'],
-            ['Antenna','Beacon','Carrier','Diode','Emitter','Frequency','Gate','Harmonic','Impulse','Junction','Keystone','Link','Modem','Node','Oscillator','Pulse','Qubit','Relay','Signal','Transponder'],
+            ['Amplified','Beaconing','Blinking','Broadcast','Broadcasting','Channeled','Channelled','Decoded','Echoing','Encrypted','Filtered','Grounded','Harmonic','Humming','Isolated','Jittered','Keyed','Latched','Looping','Modulated','Narrowed','Oscillating','Pulsed','Pulsing','Quantized','Relayed','Resonant','Synced','Syncing','Tuned'],
+            ['Antenna','Beacon','Broadcast','Carrier','Channel','Diode','Emitter','Frequency','Gate','Harbor','Harmonic','Impulse','Junction','Keystone','Lattice','Lighthouse','Link','Modem','Node','Oscillator','Packet','Ping','Pulsar','Pulse','Qubit','Relay','Semaphore','Signal','Telegraph','Transponder'],
         ],
         'stellar' => [
-            ['Ascending','Binary','Cosmic','Distant','Expanding','Flaring','Graviton','Helical','Ionized','Jovian','Kepler','Lunar','Magnetic','Nebular','Orbital','Pulsating','Quantum','Radiant','Solar','Tidal'],
-            ['Aurora','Bolide','Corona','Dwarf','Eclipse','Firmament','Galaxy','Halo','Ion','Jet','Kuiper','Luminance','Meteor','Nova','Orbit','Pulsar','Quasar','Remnant','Supernova','Zenith'],
+            ['Stellar','Nebular','Orbital','Cosmic','Gleaming','Supernal','Luminous','Twinkling','Celestial','Gravitational','Eclipsed','Comet-Borne','Equinoctial','Far-Flung'],
+            ['Nova','Quasar','Nebula','Comet','Orbit','Solstice','Zenith','Meridian','Constellation','Supernova','Parallax','Lensing','Perihelion','Eclipse'],
+        ],
+        'tarot' => [
+            ['Arcane','Suspended','Towering','Fated','Foolish','Judged','Hierophantic','Crowned','Reversed','Illumined','Querent','Esoteric','Hermetic','Drawn'],
+            ['Arcana','Fool','Hierophant','Hanged','Tower','Star','Sun','Moon','Judgement','World','Wheel','Chariot','Hermit','Magician'],
+        ],
+        'void' => [
+            ['Hushed','Unmade','Vacant','Silent','Drifting','Eclipsing','Lost','Shrouded','Fading','Hollowed','Absent','Devoured','Untold','Dimming'],
+            ['Abyss','Hollow','Eclipse','Drift','Hush','Shroud','Silence','Chasm','Umbra','Threshold','Rift','Cipher','Vanishment','Absence'],
         ],
     ];
+    // END sync-words.sh realms
 
     $r = isset($realms[$realm]) ? $realms[$realm] : $realms['fantasy'];
     $seed = hexdec(substr($hash, 0, 7));
