@@ -34,6 +34,9 @@ jobs:
       - name: Syntax check
         run: python -m py_compile python/realm_sigil/__init__.py python/realm_sigil/handler.py python/realm_sigil/realms.py
 
+      - name: Unit tests
+        run: python -m unittest discover -s python/tests -v
+
   js:
     runs-on: ubuntu-latest
     steps:
