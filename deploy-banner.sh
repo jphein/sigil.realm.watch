@@ -39,7 +39,11 @@ realm_sigil_git_info() {
     HASH=$(git rev-parse --short HEAD 2>/dev/null || echo "dev")
     BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
     # porcelain, like the python and js handlers: staged and untracked changes count (git diff --quiet saw neither)
-    if [ -n "$(git status --porcelain --untracked-files=normal 2>/dev/null)" ]; then DIRTY=true; else DIRTY=false; fi
+    # a FAILED status inside a work tree is not proof of clean: count it dirty (xreview 11-16 backfill of #20)
+    DIRTY=false
+    if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+      if st=$(git status --porcelain --untracked-files=normal 2>/dev/null); then [ -n "$st" ] && DIRTY=true; else DIRTY=true; fi
+    fi
     BUILT=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
     # Nearest version tag, for the semver/build fields (issue #3); "" without one.
     DESCRIBE=$(git describe --tags --match 'v[0-9]*.[0-9]*.[0-9]*' --long 2>/dev/null || true)

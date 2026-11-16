@@ -136,6 +136,28 @@ class RealRepo(unittest.TestCase):
         if NODE or os.environ.get("CI"):
             self.assertEqual(self.js_fields()[:2], (semver, build), "js handler (live git)")
 
+    def test_a_failed_git_status_counts_as_dirty(self):
+        # xreview 11-16 (backfill of #20): a status that FAILS inside a work tree was reported as clean
+        with open(os.path.join(self.d, ".git", "index"), "wb") as f:
+            f.write(b"not an index")          # rev-parse still works; status fails
+        self.assertNotEqual(subprocess.run(["git", "status", "--porcelain"], cwd=self.d, env=GIT_ENV,
+                                           capture_output=True).returncode, 0)
+        self.assertIs(self.baked_git_info()["dirty"], True, "deploy-banner.sh")
+        self.static_fields()
+        with open(os.path.join(self.d, "site", "version.json")) as f:
+            self.assertIs(json.load(f)["dirty"], True, "static/build.sh")
+
+    def test_js_live_git_is_cached_per_directory(self):
+        # xreview 11-16: the live path ran `git status` on every request; a second call within the TTL is cached
+        need_node(self)
+        script = ("const h=require(process.argv[1]);const fs=require('fs');"
+                  "const a=h.gitInfo(process.argv[2]).dirty;fs.writeFileSync(process.argv[2]+'/new.txt','x');"
+                  "const b=h.gitInfo(process.argv[2]).dirty;process.stdout.write(JSON.stringify([a,b]));")
+        r = subprocess.run([NODE, "-e", script, os.path.join(ROOT, "js", "handler.js"), self.d],
+                           capture_output=True, text=True, timeout=60, env=GIT_ENV)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(json.loads(r.stdout), [False, False])
+
     def test_no_version_tag(self):
         self.git("tag", "release-9")  # not v<digit>: ignored by --match
         self.assert_all("", "")
