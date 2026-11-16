@@ -49,6 +49,9 @@ function liveDescribe(cwd) {
   }
 }
 
+const LIVE = new Map();
+const LIVE_TTL_MS = 30000;
+
 function gitInfo(cwd) {
   // Prefer the baked .git_info file — it's the canonical source on
   // deployed hosts where `.git` was excluded from rsync. Symmetric with
@@ -66,6 +69,10 @@ function gitInfo(cwd) {
     return baked;
   }
 
+  // live git answers are cached per directory for LIVE_TTL_MS: `git status` walks untracked files, and a version
+  // endpoint must not do that on every request (xreview 11-16 backfill of #20)
+  const hit = LIVE.get(cwd);
+  if (hit && Date.now() - hit.at < LIVE_TTL_MS) return { ...hit.info };
   const info = { hash: 'dev', branch: 'unknown', dirty: false, describe: '' };
   try {
     info.hash = execFileSync('git', ['rev-parse', '--short', 'HEAD'], { ...GIT_OPTS, cwd }).trim() || 'dev';
@@ -77,6 +84,7 @@ function gitInfo(cwd) {
   } catch {
     // git not available
   }
+  LIVE.set(cwd, { at: Date.now(), info: { ...info } });
   return info;
 }
 
